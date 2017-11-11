@@ -1,3 +1,5 @@
+### THIS FILE IS MANAGED BY ANSIBLE -- DO NOT EDIT! ###
+
 {% if mta_dkim_sign -%}
 {%- for domain in mta_dkim_domains %}
 {{ domain.key }}._domainkey.{{ domain.name }} {{ domain.name }}:{{ domain.key }}:/etc/opendkim/keys/{{ domain.name }}/{{ domain.key }}.private

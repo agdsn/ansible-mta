@@ -1,3 +1,5 @@
+### THIS FILE IS MANAGED BY ANSIBLE -- DO NOT EDIT! ###
+
 {% for entry in item.map|dictsort(by='key') %}
 {{ entry[0] }}: {{ entry[1] if entry[1] is string else (entry[1] | join(", ")) }}
 {% endfor %}
