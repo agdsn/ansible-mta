@@ -2,3 +2,7 @@
 - import_tasks: postfix.yml
 - import_tasks: opendkim.yml
   when: mta_dkim | default(False)
+
+- name: update /etc/mailname
+  copy: dest=/etc/mailname content={{ mta_override_hostname | default(inventory_hostname) }}
+        owner=root group=root mode=644
