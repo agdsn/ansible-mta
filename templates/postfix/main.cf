@@ -105,7 +105,7 @@ smtpd_restriction_classes =
     {{ restriction }}{{ "," if not loop.last else "" }}
 {% endfor %}
 {% endfor %}
-
+smtpd_delay_reject = {{ "yes" if mta_smtpd_delay_reject else "no" }}
 # origin: mta_smtpd_client_restrictions
 smtpd_client_restrictions =
 {% for restriction in mta_smtpd_client_restrictions %}

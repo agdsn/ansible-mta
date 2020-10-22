@@ -186,6 +186,10 @@ Accepting mail
 
   __ http://www.postfix.org/postconf.5.html#broken_sasl_auth_clients
 
+* ``mta_smtpd_delay_reject`` (boolean, default false): If true the sender is rejected
+  after the ETRN command instead of the RCPT TO command.
+
+  __ http://www.postfix.org/postconf.5.html#smtpd_delay_reject
 
 Mail submission agent
 ---------------------
