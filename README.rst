@@ -191,6 +191,17 @@ Accepting mail
 
   __ http://www.postfix.org/postconf.5.html#smtpd_delay_reject
 
+* ``mta_maximal_queue_lifetime`` (string, default empty): Consider mail undeliverable
+  after set lifetime.
+
+  __ http://www.postfix.org/postconf.5.html#maximal_queue_lifetime
+
+* ``mta_bounce_queue_lifetime`` (string, default empty): Consider bounce mails 
+  undeliverable after set lifetime.
+
+
+  __ http://www.postfix.org/postconf.5.html#bounce_queue_lifetime
+
 Mail submission agent
 ---------------------
 
