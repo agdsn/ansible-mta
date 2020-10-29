@@ -86,13 +86,13 @@ strict_rfc821_envelopes = {{ "yes" if mta_strict_rfc821_envelopes else "no" }}
 {% if mta_smtpd_sasl_path -%}
 # origin: mta_smtpd_sasl
 smtpd_sasl_auth_enable = yes
-{% if mta_smtpd_sasl_type -%}
+{% if mta_smtpd_sasl_type is defined -%}
 smtpd_sasl_type= {{ mta_smtpd_sasl_type }}
 {%- endif %}
 smtpd_sasl_path= {{ mta_smtpd_sasl_path }}
-broken_sasl_auth_clients = {{ "yes" if mta_smtpd_broken_sasl_auth_clients else "no" }}
+broken_sasl_auth_clients = {{ "yes" if mta_smtpd_broken_sasl_auth_clients is defined and mta_smtpd_broken_sasl_auth_clients else "no" }}
 smtpd_sasl_security_options = {{ mta_smtpd_sasl_security_options }}
-{% endif}
+{% endif %}
 
 # origin: mta_smtpd_restriction_classes
 smtpd_restriction_classes =
