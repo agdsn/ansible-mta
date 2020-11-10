@@ -53,7 +53,7 @@
             mode="{{ item.mode | default('0664') }}"
             owner={{ item.owner | default("root") }}
             group={{ item.group | default("root") }}
-  with_dict: "{{ mta_access_databases }}"
+  loop: "{{ mta_access_databases }}"
   register: access_database_update
 
 - name: compile access databases

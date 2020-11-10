@@ -1,8 +1,6 @@
 ---
 - name: install packages
-  yum: name={{ item }} state=latest
-  with_items:
-    - opendkim
+  yum: name=opendkim state=latest
   tags:
     - yum
 

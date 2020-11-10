@@ -83,6 +83,17 @@ smtpd_helo_required = {{ "yes" if mta_smtpd_helo_required else "no" }}
 # origin: mta_strict_rfc821_envelopes
 strict_rfc821_envelopes = {{ "yes" if mta_strict_rfc821_envelopes else "no" }}
 
+{% if mta_smtpd_sasl_path -%}
+# origin: mta_smtpd_sasl
+smtpd_sasl_auth_enable = yes
+{% if mta_smtpd_sasl_type is defined -%}
+smtpd_sasl_type= {{ mta_smtpd_sasl_type }}
+{%- endif %}
+smtpd_sasl_path= {{ mta_smtpd_sasl_path }}
+broken_sasl_auth_clients = {{ "yes" if mta_smtpd_broken_sasl_auth_clients is defined and mta_smtpd_broken_sasl_auth_clients else "no" }}
+smtpd_sasl_security_options = {{ mta_smtpd_sasl_security_options }}
+{% endif %}
+
 # origin: mta_smtpd_restriction_classes
 smtpd_restriction_classes =
 {% for restriction_class in mta_smtpd_restriction_classes.keys()|sort %}
@@ -95,7 +106,7 @@ smtpd_restriction_classes =
     {{ restriction }}{{ "," if not loop.last else "" }}
 {% endfor %}
 {% endfor %}
-
+smtpd_delay_reject = {{ "yes" if mta_smtpd_delay_reject else "no" }}
 # origin: mta_smtpd_client_restrictions
 smtpd_client_restrictions =
 {% for restriction in mta_smtpd_client_restrictions %}
@@ -197,7 +208,7 @@ postscreen_access_list = permit_mynetworks
 postscreen_greet_action = {{ mta_postscreen.greet.action }}
 {% if mta_postscreen.greet.banner | default(False) -%}
 # origin: mta_postscreen.greet.banner
-postscreen_greet_banner = {{ inventory_hostname }} {{ mta_postscreen.greet.banner }}
+postscreen_greet_banner = {{ mta_override_hostname | default(inventory_hostname) }} {{ mta_postscreen.greet.banner }}
 {%- endif %}
 {%- endif %}
 
@@ -236,6 +247,16 @@ message_size_limit = {{ mta_message_size_limit }}
 {% if mta_unverified_recipient_reject_code %}
 # origin: mta_unverified_recipient_reject_code
 unverified_recipient_reject_code = {{ mta_unverified_recipient_reject_code }}
+{% endif %}
+
+{% if mta_maximal_queue_lifetime %}
+# origin: mta_maximal_queue_lifetime
+maximal_queue_lifetime = {{ mta_maximal_queue_lifetime }}
+{% endif %}
+
+{% if mta_bounce_queue_lifetime %}
+# origin: mta_bounce_queue_lifetime
+bounce_queue_lifetime = {{ mta_bounce_queue_lifetime }}
 {% endif %}
 
 {% for key, value in mta_parameters_all|combine(mta_parameters)|dictsort -%}

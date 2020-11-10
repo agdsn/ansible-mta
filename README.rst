@@ -171,6 +171,36 @@ Accepting mail
 
   __ http://www.postfix.org/postconf.5.html#smtpd_recipient_restrictions
 
+* ``mta_smtpd_sasl_path`` (string, default empty): enable authorization of incoming
+  smtp clients. See `smtpd_sasl_type`
+
+  __ http://www.postfix.org/SASL_README.html
+
+* ``mta_smtpd_sasl_type`` (string, default empty): select an other sasl implementation
+  than cyrus, which is default in postfix.
+
+  __ http://www.postfix.org/SASL_README.html#server_sasl_enable
+
+* ``mta_smtpd_broken_sasl_auth_clients`` (boolean, default false): Enables the
+  compatibility mode with old broken smtp clients.
+
+  __ http://www.postfix.org/postconf.5.html#broken_sasl_auth_clients
+
+* ``mta_smtpd_delay_reject`` (boolean, default false): If true the sender is rejected
+  after the ETRN command instead of the RCPT TO command.
+
+  __ http://www.postfix.org/postconf.5.html#smtpd_delay_reject
+
+* ``mta_maximal_queue_lifetime`` (string, default empty): Consider mail undeliverable
+  after set lifetime.
+
+  __ http://www.postfix.org/postconf.5.html#maximal_queue_lifetime
+
+* ``mta_bounce_queue_lifetime`` (string, default empty): Consider bounce mails 
+  undeliverable after set lifetime.
+
+
+  __ http://www.postfix.org/postconf.5.html#bounce_queue_lifetime
 
 Mail submission agent
 ---------------------
