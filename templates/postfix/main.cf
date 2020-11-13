@@ -194,11 +194,6 @@ virtual_alias_maps =
 {% endfor %}
 {% endif %}
 
-{% if mta_message_size_limit -%}
-# origin: mta_message_size_limit
-message_size_limit = {{ mta_message_size_limit }}
-{% endif %}
-
 {% if mta_postscreen -%}
 # origin: mta_postscreen
 postscreen_access_list = permit_mynetworks
@@ -242,6 +237,7 @@ smtp_sasl_security_options =
 recipient_delimiter = {{ mta_recipient_delimiter }}
 {% endif %}
 
+# origin: mta_message_size_limit
 message_size_limit = {{ mta_message_size_limit }}
 
 {% if mta_unverified_recipient_reject_code %}
