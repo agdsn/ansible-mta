@@ -4,6 +4,7 @@ mta_alias_database: []
 mta_alias_maps:
   - "$alias_database"
   - hash:/etc/postfix/aliases
+mta_connect_timeout: False
 mta_local_canonical_myorigin: ""
 mta_local_sender_canonical_maps: []
 mta_local_recipient_canonical_maps: []
