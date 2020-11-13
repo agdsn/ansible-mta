@@ -28,7 +28,11 @@ alias_database =
 
 {% if mta_listen %}
 # mta_listen is true
-inet_interfaces = {{ mta_listen_interfaces | join(", ") }}
+inet_interfaces = {% for interface in mta_listen_interfaces %}
+    {{ interface }}{{ "," if not loop.last else "" }}
+{% endfor %}
+
+{# {{ mta_listen_interfaces | join(", ") }} #}
 {% else %}
 # mta_listen is false
 inet_interfaces = loopback-only
