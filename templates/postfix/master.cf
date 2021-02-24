@@ -13,10 +13,16 @@
 {% if mta_postscreen %}
 smtp      inet  n       -       n       -       1       postscreen
 smtpd     pass  -       -       n       -       -       smtpd
+{% if mta_dkim  %}
+  -o smtpd_milters=inet:127.0.0.1:8891
+{%- endif %}
 dnsblog   unix  -       -       n       -       0       dnsblog
 tlsproxy  unix  -       -       n       -       0       tlsproxy
 {%- else %}
 smtp      inet  n       -       n       -       -       smtpd
+{% if mta_dkim  %}
+  -o smtpd_milters=inet:127.0.0.1:8891
+{%- endif %}
 {%- endif %}
 {%- endif %}
 
