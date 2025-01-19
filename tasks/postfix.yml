@@ -53,9 +53,9 @@
 - name: update access databases
   ansible.builtin.template: src=postfix/access
             dest={{ item.key }}
-            mode="{{ item.mode | default('0664') }}"
-            owner={{ item.owner | default("root") }}
-            group={{ item.group | default("root") }}
+            mode="{{ item.value.mode | default('0664') }}"
+            owner={{ item.value.owner | default("root") }}
+            group={{ item.value.group | default("root") }}
   with_dict: "{{ mta_access_databases }}"
   register: access_database_update
 
