@@ -215,6 +215,11 @@ postscreen_dnsbl_threshold = {{ mta_postscreen.dnsbl.threshold }}
 delay_warning_time = {{ mta_delay_warning }}
 {%- endif %}
 
+# origin: mta_disable_vrfy_command
+{% if mta_disable_vrfy_command -%}
+disable_vrfy_command = {{'yes' if mta_disable_vrfy_command else 'no' }}
+{%- endif %}
+
 {% if mta_relayhost -%}
 # origin: mta_relayhost
 relayhost = {{ mta_relayhost }}

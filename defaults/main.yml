@@ -33,6 +33,7 @@ mta_virtual_mailbox_domains: []
 mta_virtual_transport: []
 mta_postscreen: false
 mta_delay_warning: false
+mta_disable_vrfy_command: true
 mta_transport_map: {}
 mta_tls_security_level: "may"
 mta_tls_log: false
