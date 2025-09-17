@@ -13,7 +13,7 @@
 
 - name: really update include alias file
   ansible.builtin.shell: cat {{ alias_files.stdout_lines | join(' ') }} > /etc/postfix/aliases
-  when: '" ".join(alias_files.stdout_lines)'
+  when: alias_files.stdout_lines | length > 0
   notify:
     - compile include alias file
 
