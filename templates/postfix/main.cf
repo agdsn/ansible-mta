@@ -1,30 +1,73 @@
-compatibility_level = 2
+{% macro string_list(l, caller=None) %}
+{{ caller() }} =
+{% for item in l %}
+  {{ item }}
+{% endfor %}
+
+{% endmacro %}
 
 # configuration
 myhostname = {{ mta_override_hostname | default(inventory_hostname) }}
 myorigin = $myhostname
 
-{% if mta_is_destination -%}
-# mta_is_destination = True
-mydestination = $myhostname
-mailbox_command = {{ mta_mailbox_command }}
+compatibility_level = 2
 
+{% if mta_delivery_agent -%}
+# mta_delivery_agent is set ({{ mta_delivery_agent }})
+{% if mta_override_destination %}
+{% call string_list(mta_override_destination) %}mydestination{% endcall %}
+{% else %}
+mydestination = $myhostname
+{% endif %}
+
+{% if mta_delivery_type == "local" -%}
+# mta_delivery_type is local
+{% if mta_mailbox_command %}
+mailbox_command = {{ mta_mailbox_command }}
+{% elif mta_delivery_agent == "dovecot" %}
+# mta_delivery_agent is dovecot
+mailbox_command = /usr/lib{% if ansible_os_family == "RedHat" %}exec{% endif %}/dovecot/deliver -f ${sender} -a ${recipient}
+{% endif %}
+
+{% elif mta_delivery_type == "lmtp" %}
+# mta_delivery_type is lmtp
+{% if mta_delivery_agent == "dovecot" %}
+virtual_transport = lmtp:unix:private/dovecot-lmtp
+{% elif mta_delivery_agent == "custom" %}
+{% call string_list(mta_custom_delivery_agent_local_recipient_maps) %}local_recipient_maps{% endcall %}
+{% endif %}
+{% else %}
+# mta_delivery_type is agent_transport
+local_transport = {{ mta_delivery_agent }}
+{{ mta_delivery_agent }}_destination_recipient_limit = 1
+{% endif %}
+
+{% else %}
+# mta_delivery_agent is false, reject all local mail
+# (no sensible destinations)
+mydestination =
+
+local_transport = error:5.1.1 Mailbox unavailable
+local_recipient_maps =
+{% endif %}
+
+
+{% if mta_delivery_agent %}
 alias_database =
-  {{ mta_alias_database|map('rformat', '%(type)s:%(file)s')|join('\n  ') }}
+  {{ mta_alias_database | map(attribute='type') | zip(mta_alias_database | map(attribute='file')) | map('join', ':') | join('\n  ') }}
 
 # mta_alias_maps
 alias_maps =
   {{ mta_alias_maps|join('\n  ') }}
-
-{% else -%}
-# mta_is_destination is false, reject all mail
-# (no sensible destinations)
-mydestination =
-local_transport = error:5.1.1 Mailbox unavailable
-local_recipient_maps =
+{% else %}
 alias_maps =
 alias_database =
 {%- endif %}
+
+{% if mta_relay_recipient_maps %}
+# origin: mta_relay_recipient_maps
+{% call string_list(mta_relay_recipient_maps) %}relay_recipient_maps{% endcall %}
+{% endif %}
 
 {% if mta_listen %}
 # mta_listen is true
@@ -44,16 +87,29 @@ soft_bounce = {{ 'yes' if mta_soft_bounce else 'no' }}
 relay_domains = {{ mta_relay_domains | sort | join(',\n    ') }}
 {%- endif %}
 
-{% if mta_transport_map -%}
-# origin: mta_transport_map
-transport_maps = hash:/etc/postfix/transports
+{% if mta_transport_map or mta_transport_maps -%}
+# origin: mta_transport_map, mta_transport_maps
+{% call string_list((['hash:/etc/postfix/transports'] if mta_transport_map else []) + mta_transport_maps) %}transport_maps{% endcall %}
 {%- endif %}
 
-{% if mta_listen %}
+{% if mta_mailbox_transport_maps -%}
+# origin: mta_mailbox_transport_maps
+{% call string_list(mta_mailbox_transport_maps) %}mailbox_transport_maps{% endcall %}
+{%- endif %}
+
+{% if mta_listen and mta_tls %}
 # origin: mta_listen (requires mta_tls, which is used here)
 smtpd_use_tls = yes
-smtpd_tls_cert_file = /etc/postfix/ssl.crt
-smtpd_tls_key_file = /etc/postfix/ssl.key
+{% if mta_tls_cert_file %}
+smtpd_tls_cert_file = {{ mta_tls_cert_file }}
+{% else %}
+smtpd_tls_cert_file = /etc/postfix/mta.crt
+{% endif %}
+{% if mta_tls_key_file %}
+smtpd_tls_cert_file = {{ mta_tls_key_file }}
+{% else %}
+smtpd_tls_key_file = /etc/postfix/mta.key
+{% endif %}
 smtpd_tls_security_level = {{ mta_tls_security_level }}
 smtpd_tls_exclude_ciphers = EXPORT, LOW
 tls_ssl_options = NO_COMPRESSION
@@ -62,6 +118,9 @@ tls_ssl_options = NO_COMPRESSION
 smtp_tls_wrappermode = {{ "yes" if mta_smtp_tls_wrappermode else "no" }}
 smtp_tls_security_level = {{ mta_smtp_tls_security_level }}
 smtp_tls_CApath = {{ mta_smtp_tls_ca_path }}
+{% if mta_tls_dnssec %}
+smtp_dns_support_level = dnssec
+{% endif %}
 
 {% if mta_tls_log -%}
 # origin: mta_tls_log
@@ -158,7 +217,15 @@ smtpd_milters =
 
 {% if mta_domains -%}
 # origin: mta_domains (requires mta_virtual_maps)
+{% if mta_virtual_maps %}
+virtual_mailbox_domains = {{ mta_domains | join(", ") }}
+{% else %}
 virtual_alias_domains = {{ mta_domains | join(", ") }}
+{% endif %}
+# origin: mta_virtual_maps
+{% if mta_virtual_maps %}
+{% call string_list(mta_virtual_maps) %}virtual_mailbox_maps{% endcall %}
+{% endif %}
 {% endif %}
 
 {% if mta_virtual_mailbox_domains -%}
@@ -171,10 +238,10 @@ virtual_mailbox_domains = {{ mta_virtual_mailbox_domains | join(", ") }}
 virtual_transport = {{ mta_virtual_transport }}
 {% endif %}
 
-{% if mta_domains or mta_virtual_maps -%}
-# origin: mta_virtual_maps
+{% if mta_domains or mta_virtual_alias_maps -%}
+# origin: mta_virtual_alias_maps
 virtual_alias_maps =
-{% for item in mta_virtual_maps %}
+{% for item in mta_virtual_alias_maps %}
 {% if item is string %}
     {{ item }}
 {% elif item is mapping %}
@@ -240,6 +307,18 @@ recipient_delimiter = {{ mta_recipient_delimiter }}
 # origin: mta_unverified_recipient_reject_code
 unverified_recipient_reject_code = {{ mta_unverified_recipient_reject_code }}
 {% endif %}
+
+
+# submission settings which may contain whitespace
+
+# origin: mta_msa_recipient_restrictions
+{% call string_list(mta_msa_recipient_restrictions) %}submission_recipient_restrictions{% endcall %}
+
+# origin: mta_msa_sender_restrictions
+{% call string_list(mta_msa_sender_restrictions) %}submission_sender_restrictions{% endcall %}
+
+# origin: mta_msa_sender_login_maps
+{% call string_list(mta_msa_sender_login_maps) %}submission_sender_login_maps{% endcall %}
 
 {% for key, value in mta_parameters_all|combine(mta_parameters)|dictsort -%}
   {{ key }}=

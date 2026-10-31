@@ -4,7 +4,16 @@
 
 
 - name: install packages
-  ansible.builtin.package: name=postfix state=present
+  ansible.builtin.package:
+    name:
+    - postfix
+    - postfix-ldap
+    - postfix-pcre
+    state: present
+  tags:
+  - apt
+  notify:
+  - restart postfix
 
 - name: discover default configuration values
   ansible.builtin.command: postconf -d
@@ -18,11 +27,24 @@
                                       | map('regex_replace', '^(\\w+ =)$', '\\1 ')
                                       | map('split', ' = ', 1)) }}"
 
+- name: "postfix: deploy privacy header checks"
+  template:
+    src: postfix/privacy_header_checks.pcre
+    dest: /etc/postfix/
+  when: mta_msa_privacy
+  tags:
+  - postfix
+  notify:
+  - reload postfix
+
 - name: instanciate config files
   ansible.builtin.template: dest=/etc/postfix/{{ item }} src=postfix/{{ item }} lstrip_blocks=yes
   with_items:
     - master.cf
     - main.cf
+  tags:
+  - postfix
+  - psotfix-spf
   notify:
     - restart postfix
 
@@ -89,7 +111,7 @@
 - name: update virtual tables
   ansible.builtin.template: src=postfix/virtual dest=/etc/postfix/virtual_{{ item.domain }}
   when: item is mapping
-  with_items: "{{ mta_virtual_maps | default(omit) }}"
+  with_items: "{{ mta_virtual_alias_maps | default(omit) }}"
   tags:
     - postfix_virtual_map
   register: virtual_map_update
@@ -102,6 +124,45 @@
     - reload postfix
   tags:
     - postfix_virtual_map
+
+- name: "postfix: create map directory"
+  file:
+    state: directory
+    path: /etc/postfix/maps/
+    owner: postfix
+    group: postfix
+    mode: ug=rwx,o-rwx
+  register: map_infrastructure
+  tags:
+  - postfix-map
+  - postfix-map-hash
+  - postfix-map-ldap
+
+- name: "postfix: hack to ensure that aliases.db can be written by postfix"
+  command: chown postfix:postfix /etc/aliases.db
+  failed_when: False
+  tags:
+  - postfix-map
+  - postfix-map-hash
+
+- name: "postfix: build hashes"
+  include: postfix-build-hashes.yml
+  tags:
+  - postfix-map
+  - postfix-map-hash
+
+- name: "postfix: build rfc address tables"
+  include: postfix-build-rfc-address-tables.yml
+  tags:
+  - postfix-map
+  - postfix-map-hash
+  - postfix-map-rfc
+
+- name: "postfix: build ldap configurations"
+  include: postfix-build-ldap-configs.yml
+  tags:
+  - postfix-map
+  - postfix-map-ldap
 
 - name: create alias include dir
   ansible.builtin.file: path=/etc/postfix/aliases.d/ state=directory
@@ -141,70 +202,105 @@
   notify:
     - reload postfix
 
-- name: upload certificate
-  ansible.builtin.copy: content="{{ mta_tls_cert }}"
-        dest=/etc/postfix/ssl.crt
-        owner=root
-        group=root
-        mode=0444
-  when: mta_tls_cert | default(false)
+- name: "postfix: upload MTA certificate"
+  copy:
+    content: "{{ mta_tls_cert }}"
+    dest: /etc/postfix/mta.crt
+    owner: root
+    group: root
+    mode: ugo=r
+  when: mta_listen and mta_tls and not mta_tls_cert_file and mta_tls_cert | default(false)
   notify:
-    - reload postfix
+  - reload postfix
   tags:
-    - certificate
+  - certificate
 
-- name: upload key
-  ansible.builtin.copy: content="{{ mta_tls_key }}"
-        dest=/etc/postfix/ssl.key
-        owner=root
-        group=root
-        mode=0400
-  when: mta_tls_key | default(false)
+- name: "postfix: upload MTA key"
+  copy:
+    content: "{{ mta_tls_key }}"
+    dest: /etc/postfix/mta.key
+    owner: root
+    group: root
+    mode: u=r,go-rwx
+  when: mta_listen and mta_tls and not mta_tls_key_file and mta_tls_key | default(false)
   notify:
-    - reload postfix
+  - reload postfix
   tags:
-    - certificate
-    - requires-secret
+  - certificate
+  - requires-secrets
 
-- name: setup core firewall service files
-  ansible.builtin.copy: src=firewalld/{{ item }}.xml dest=/etc/firewalld/services/
-  with_items:
-    - smtpd
-  when: ansible_distribution in ['Fedora']
-  register: firewall_rule_copy1
+- name: "postfix: upload MSA certificate"
+  copy:
+    content: "{{ mta_msa_tls_cert }}"
+    dest: /etc/postfix/msa.crt
+    owner: root
+    group: root
+    mode: u=r,go-rwx
+  when: "mta_msa and mta_msa_tls and not mta_msa_tls_cert_file and mta_msa_tls_cert is defined"
+  notify:
+  - reload postfix
   tags:
-    - firewall
+  - certificate
 
-- name: setup submission firewall service files
-  ansible.builtin.copy: src=firewalld/{{ item }}.xml dest=/etc/firewalld/services/
-  when: mta_msa and ansible_distribution in ['Fedora']
-  with_items:
-    - submission
-  register: firewall_rule_copy2
+- name: "postfix: link MSA certificate"
+  file:
+    state: link
+    src: "{{ mta_msa_tls_cert_file }}"
+    dest: /etc/postfix/msa.crt
+    force: yes
+  when: "mta_msa and mta_msa_tls and not not mta_msa_tls_cert_file"
+  notify:
+  - reload postfix
   tags:
-    - firewall
+  - certificate
 
-- name: reload firewall
-  ansible.builtin.command: firewall-cmd --reload
-  when: (firewall_rule_copy1 is changed) or (firewall_rule_copy2 is changed)
+- name: "postfix: upload MSA key"
+  copy:
+    content: "{{ mta_msa_tls_key }}"
+    dest: /etc/postfix/msa.key
+    owner: root
+    group: root
+    mode: u=r,go-rwx
+  when: "mta_msa and mta_msa_tls and not mta_msa_tls_key_file and mta_msa_tls_key is defined"
+  notify:
+  - reload postfix
   tags:
-    - firewall
+  - certificate
+  - requires-secrets
 
-- name: enable core services in firewall
-  ansible.builtin.command: firewall-cmd --permanent --zone=public --add-service={{ item }}
-  when: ansible_distribution in ['Fedora']
-  with_items:
-    - smtpd
+- name: "postfix: link MSA key"
+  file:
+    state: link
+    src: "{{ mta_msa_tls_key_file }}"
+    dest: /etc/postfix/msa.key
+    force: yes
+  when: "mta_msa and mta_msa_tls and not not mta_msa_tls_key_file"
+  notify:
+  - reload postfix
   tags:
-    - firewall
+  - certificate
 
-- name: enable submission in firewall
-  ansible.builtin.command: firewall-cmd --permanent --zone=public --add-service={{ item }}
-  when: mta_msa and ansible_distribution in ['Fedora']
-  with_items:
-    - submission
+- include: postfix-spf-policyd.yml
+  when: mta_spf
   tags:
-    - firewall
+  - postfix
+  - postfix-spf
+
+- include: postfix-ferm.yml
+  when: "ferm | default(False)"
+  tags:
+  - ferm
+
+- include: postfix-nft.yml
+  when: "nft | default(False)"
+  tags:
+  - nft
 
 - name: start and enable postfix
   ansible.builtin.service: name=postfix state=started enabled=yes
+
+- name: "postfix: upload collectd scripts"
+  copy:
+    src: queuesize.sh
+    dest: /usr/local/bin/
+    mode: ugo=rx

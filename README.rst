@@ -7,34 +7,91 @@ Variables
 Accepting mail
 --------------
 
-* ``mta_is_destination`` (bool): if true, the ``mydestination`` postfix
-  parameter will be set to ``$myhostname``. This is required to accept mail
-  for local delivery.
+* ``mta_hashes`` (list of things, default empty): a list of hash definitions
+  of which the resulting files can be referenced in ``mta_virtual_maps``,
+  ``mta_virtual_alias_maps``, ``mta_alias_maps`` and ``mta_transport_maps``.
 
-* ``mta_alias_maps`` (list of things): map local aliases to user names or pipes
-  or remote mail addresses.
+  Each entry consists of the following fields:
 
-  If ``mta_alias_maps`` is false or empty, or ``mta_is_destination`` is false,
-  local delivery will be shunted to a ``5.1.1`` error.
+  * ``type`` (string): must be one of the following:
 
-  Each thing in the list can have the following attributes:
+    - ``domain-hash``: hashes of this type require the additional field
+      ``domain`` which specifies the domain to append to each entry. This saves
+      you from appending ``@domain`` to each entry in ``map`` (see below).
 
-  * ``thing.file`` (required, string): Path to the file where the alias map is
-    stored. Usually, one of the things should be managing ``/etc/aliases``.
-  * ``thing.map`` (mapping of addresess to targets): This works like the map in
-    ``mta_virtual_maps``.
-  * ``thing.owner`` (optional, user name): The UNIX user which will own the
-    file. This has semantics with Postfix, namely piped commands will be
-    executed under the user and group to which the file belongs, if its not
-    UID 0.
-  * ``thing.group`` (optional, group name): The UNIX group to which the file
-    will belong. See above for details.
-  * ``thing.mode`` (optional, chmod-compatible mode specfication): The mode to
-    use for the aliases file.
+    - ``simple-hash``: hashes of this type simply write out the dictionary
+      ``map`` into a file.
 
-  Note that using a restrictive mode (e.g. no write permissions for the owning
-  user) may not properly work, as the postalias command must be able to write
-  in the same directory and will do so as the user to which the file belongs.
+    - ``alias-hash``: hashes of this type simply write out the dictionary
+      ``map`` into a file, but in aliases format instead of postfix hash format.
+
+  * ``map`` (dictionary): the mapping to write into the hash.
+  * ``domain`` (string, only for ``domain-hash``): domain name which is appended
+    to each key of the ``map``. The file hash thus looks like ``key@domain
+    value``.
+
+  * ``name`` (string, optional if ``path`` is given): a file name for the hash.
+    This is relative to ``/etc/postfix/maps``. If ``path`` is given, the
+    ``name`` is ignored.
+
+  * ``path`` (string, optional if ``name`` is given): Absolute path for the
+    hash. Directories must exist.
+
+* ``mta_ldaps`` (list of things, default empty): a list of ldap_table(5)
+  definitions of which the resulting files can be referenced in
+  ``mta_virtual_maps``, ``mta_virtual_alias_maps``, ``mta_alias_maps`` and
+  ``mta_transport_maps``.
+
+  See the manpage for the meaning of the individual fields.
+
+  Each entry consists of the following fields:
+
+  * ``type`` (string): must be ``ldap``
+
+  * ``servers`` (list of strings, default ``["localhost"]``) -> ldap_table
+    ``server_host``
+  * ``base`` -> ldap_table ``search_base``
+  * ``filter`` -> ldap_table ``query_filter``
+  * ``result_attribute`` -> ldap_table ``result_attribute``
+  * ``domains`` (list of strings, optional) -> ldap_table ``domain``
+  * ``special_result_attribute`` (string, optional) -> ldap_table
+    ``special_result_attribute``
+  * ``terminal_result_attribute`` (string, optional) -> ldap_table
+    ``terminal_result_attribute``
+  * ``result_format`` (string, optional) -> ldap_table ``result_format``
+
+  * ``name`` (string, optional if ``path`` is given): a file name for the hash.
+    This is relative to ``/etc/postfix/maps``. If ``path`` is given, the
+    ``name`` is ignored.
+
+  * ``path`` (string, optional if ``name`` is given): Absolute path for the
+    hash. Directories must exist.
+
+* ``mta_virtual_maps`` (list of strings): List of postfix maps, such as
+  ``hash:/etc/aliases``. To reference named maps from ``mta_hashes`` or
+  ``mta_ldap``, use ``hash:/etc/postfix/maps/$name`` or
+  ``ldap:/etc/postfix/maps/$name`` respectively, where ``$name`` must be the
+  ``name`` of the hash. If you used ``path``, you simply use the absolute path
+  instead of the above.
+
+  This defines the `virtual_mailbox_maps`__.
+
+  __ http://www.postfix.org/postconf.5.html#virtual_mailbox_maps
+
+* ``mta_virtual_alias_maps`` (list of strings): Like ``mta_virtual_maps``, but
+  for `virtual_alias_maps`__.
+
+  __ http://www.postfix.org/postconf.5.html#virtual_alias_maps
+
+* ``mta_alias_maps`` (list of strings): Like ``mta_virtual_maps``, but for
+  `alias_maps`__.
+
+  __ http://www.postfix.org/postconf.5.html#alias_maps
+
+* ``mta_transport_maps`` (list of strings): Like ``mta_virtual_maps``, but for
+  `transport_maps`__.
+
+  __ http://www.postfix.org/postconf.5.html#transport_maps
 
 * ``mta_listen`` (bool, default true): if true, postfix will be configured to
   listen on port 25 for incoming connections.
@@ -43,8 +100,8 @@ Accepting mail
   accept mail. This is independent from ``mta_is_destination`` -- domains may be
   purely for forwarding purposes.
 
-* ``mta_message_size_limit`` (integer, default 10240000): Maximum size of emails
-  that postfix will accept in bytes (on either service, smtpd or submission).
+* ``mta_message_size_limit`` (integer): Maximum size for a message in bytes to
+  be accepted for delivery (on either service, smtpd or submission)
 
 * ``mta_postscreen`` (thing or false): If not false, the ``postscreen`` service
   will be enabled.
@@ -77,26 +134,6 @@ Accepting mail
     * ``mta_postscreen.dnsbl.threshold`` (integer): The threshold for a client
       to fail the test.
 
-* ``mta_virtual_maps`` (list of things). The things can either be strings, in
-  which case they are taken verbatimly in the ``virtual_alias_maps`` parameter
-  of postfix. Otherwise, they must be hashes with the following characteristics:
-
-  * ``thing.domain`` (string): The domain for which this mapping shall be used
-  * ``thing.map`` (mapping from localparts to strings): The mapping from the
-    localpart to the delivery destination. The values may also be lists of
-    strings, which will be joined with ``,``.
-
-  Example::
-
-    mta_virtual_maps:
-      - domain: foo.example
-        map:
-          postmaster:
-           - fred
-           - juliet
-          webmaster: root
-          sales: sales@bar.example
-
 * ``mta_relayhost`` (string):  If set, postfix will relay non-local mail through
   this destination.  Refer to the `postfix documentation on the relayhost
   directive`__ for details.
@@ -108,32 +145,23 @@ Accepting mail
   directly; it will typically be used for MTAs that only need to send cron mails
   etc.
 
-* ``mta_relayhost_auth_username`` (string): This is only meaningful
-  if ``mta_relayhost`` is set. In that case this set the SASL user name to use
-  to set up authentication with the relay host using SASL.
+* ``mta_relayhost_auth`` (mapping): This is only meaningful if
+  ``mta_relayhost`` is set. In that case, this mapping allows to set up
+  authentication with the relay host using SASL:
 
-* ``mta_relayhost_auth_password`` (string): The password to use for relayhost SASL
-  authentication. Required if ``mta_relayhost_auth_username`` is used.
+  * ``mta_relayhost_auth.username`` (string): the SASL user name to use
+  * ``mta_relayhost_auth.mapfile`` (path): A path where a config file
+    containing the credentials will be written to.
 
-* ``mta_relayhost_auth_mapfile`` (path): A path where a config file containing
-  the SASL authentication credentials will be written to.
-
-
-* ``mta_transport_map`` (mapping):  A lookup table, mapping destination
-  address patterns to their respective nexthop.  Refer to the `postfix
-  transport(5) manual`__ for details on the format of this table.
-
-  __ http://www.postfix.org/transport.5.html
-
-  Example::
-
-    mta_transport_map:
-      "example.com": "smtp:server-1.example.com"
-      "example.org": "smtp:server-1.example.org"
+* ``mta_relayhost_password`` (string): The password to use for relayhost SASL
+  authentication. Required if ``mta_relayhost_auth`` is used.
 
 * ``mta_smtpd_client_restrictions`` (list of strings, default empty):
   Add client restrictions for the server to apply.  See
   `smtpd_client_restrictions`__.
+
+  The restrictions apply only to the MTA service listening on port 25, not the
+  MSA. See below for MSA settings.
 
   __ http://www.postfix.org/postconf.5.html#smtpd_client_restrictions
 
@@ -148,10 +176,16 @@ Accepting mail
 * ``mta_smtpd_helo_restrictions`` (list of strings, default empty): Add
   HELO restrictions for the server to apply.  See `smtpd_helo_restrictions`__.
 
+  The restrictions apply only to the MTA service listening on port 25, not the
+  MSA. See below for MSA settings.
+
   __ http://www.postfix.org/postconf.5.html#smtpd_helo_restrictions
 
 * ``mta_smtpd_sender_restrictions`` (list of strings, default empty): Add
   sender restrictions for the server to apply.  See `smtpd_sender_restrictions`__.
+
+  The restrictions apply only to the MTA service listening on port 25, not the
+  MSA. See below for MSA settings.
 
   __ http://www.postfix.org/postconf.5.html#smtpd_sender_restrictions
 
@@ -163,13 +197,87 @@ Accepting mail
   ``reject_unauth_destination`` in your list of restrictions to prevent your MTA
   from becoming an open relay!
 
+  The restrictions apply only to the MTA service listening on port 25, not the
+  MSA. See below for MSA settings.
+
   __ http://www.postfix.org/postconf.5.html#smtpd_relay_restrictions
 
 * ``mta_smtpd_recipient_restrictions`` (list of strings, default empty): Add
   recipient restrictions for the server to apply.  See
   `smtpd_recipient_restrictions`__.
 
+  The restrictions apply only to the MTA service listening on port 25, not the
+  MSA. See below for MSA settings.
+
   __ http://www.postfix.org/postconf.5.html#smtpd_recipient_restrictions
+
+
+Spam classification on incoming mail
+------------------------------------
+
+If ``mta_spampd`` is not false, ``spampd`` is installed and configured as a
+before-queue SMTPD proxy, which acts on all incoming mail on port 25.
+
+Additional configuration is possible with the following options:
+
+* ``mta_spampd_port`` (integer, default 10026): The localhost port on which
+  ``spampd`` is configured to listen. Generally, there is no need to change
+  this, unless you have something else which needs 10026.
+
+* ``mta_spampd_max_children`` (integer, default 5): The maximum number of
+  worker children used by ``spampd``.
+
+* ``mta_spampd_only_local`` (boolean, default true): Whether to disable all
+  non-local checks (e.g. DNSBL).
+
+* ``mta_proxy_sink_port`` (integer, default 12500): The sink where ``spampd``
+  puts its mail afterwards; this is configured to be a postfix smtpd which will
+  then handle the actual (local or remote) delivery.
+
+
+Local mail delivery
+-------------------
+
+Local mail delivery is controlled by the following options.
+
+* ``mta_delivery_type`` (string, default ``"local"``). A string which may have
+  any of the following values:
+
+  * ``"local"``: delivery is performed using the ``local(8)``
+    transport.
+  * ``"lmtp"``: delivery is performed using an LMTP transport depending on the
+    ``mta_delivery_agent``.
+  * ``"agent_transport"``: delivery is performed using a transport associated
+    with the ``mta_delivery_agent`` (see below).
+
+  The key difference is that the ``local(8)`` will use the local, UNIX user
+  associated with the recipient (determined by looking up the user name in the
+  alias maps), while the ``"agent_transport"`` is fixed to use
+  ``mta_agent_transport_user`` permissions.
+
+* ``mta_delivery_agent`` (string or false, default false). A string which may
+  have any of the following values:
+
+  * false: Prohibits any delivery and returns a ``5.1.1 Mailbox
+    unavailable`` error. This also implicitly forces ``mta_delivery_type`` to
+    ``"local"``.
+
+  * ``"dovecot"``: Uses ``dovecot-lda``, passing the recipient address and the
+    envelope sender. If used with ``"agent_transport"``, the user name
+    resulting from the lookup is also passed.
+
+  .. note::
+
+     For backward compatiblity, ``mta_delivery_agent`` defaults to
+     ``"dovecot"`` instead of false if ``mta_is_destination`` is set to true.
+
+* ``mta_agent_transport_user`` (string, default "``vmail:mail``"). This is used
+  when agent transport is enabled (see above). It is the POSIX user under which
+  the delivery command of the agent is run.
+
+* ``mta_is_destination`` (bool, *deprecated*). If ``mta_delivery_agent`` is not
+  set but ``mta_is_destination`` is set to true, ``mta_delivery_agent``
+  defaults to ``"dovecot"``.
 
 
 Mail submission agent
@@ -192,6 +300,50 @@ authentication is required on the submission port to allow sending mail.
 * ``mta_msa_dkim`` (bool): Enable the OpenDKIM milter for mail submitted via the
   MSA. Requires ``mta_dkim`` to be configured properly.
 
+* ``mta_msa_privacy`` (bool, default False): if enabled, IPs are removed from
+  ``Received`` headers on mail received on the submission port. Several other
+  headers are stripped too, which are also configured with
+  ``mta_msa_privacy_strip_headers``.
+
+* ``mta_msa_privacy_strip_headers`` (list of strings): if ``mta_msa_privacy`` is
+  enabled, the header names in this list are removed from mails received for
+  submission. The default list consists of:
+
+  - X-Mailer
+  - X-Enigmail
+  - X-Originating-Ip
+  - User-Agent
+
+* ``mta_msa_sender_restrictions`` (list of strings, default empty): Set
+  sender restrictions for the server to apply.  See
+  `smtpd_sender_restrictions`__.
+
+  The restrictions apply only to the MSA service.
+
+  __ http://www.postfix.org/postconf.5.html#smtpd_sender_restrictions
+
+* ``mta_msa_recipient_restrictions`` (list of strings, default empty): Set
+  recipient restrictions for the server to apply.  See
+  `smtpd_recipient_restrictions`__.
+
+  The restrictions apply only to the MSA service.
+
+  __ http://www.postfix.org/postconf.5.html#smtpd_recipient_restrictions
+
+* ``mta_msa_sender_login_maps`` (list of strings): Like ``mta_virtual_maps``,
+  but for `sender_login_maps`__.
+
+  The setting applies only to the MSA service.
+
+  __ http://www.postfix.org/postconf.5.html#sender_login_maps
+
+* ``mta_msa_proxy`` (boolean, default false): If enabled, configure the MSA
+  to listen at 127.0.0.1:1587 to be used behind a submission proxy (such as
+  dovecot-submission). It will allow hosts from 127.0.0.0/8 to use xclient
+  in order to spoof the source address for further restrictions.
+
+  This also disables authentication, so the proxy has to handle that.
+
 TLS
 ---
 
@@ -204,28 +356,6 @@ TLS
 
 * ``mta_tls_log`` (bool, default false): Enable logging of TLS connections,
   e.g. for cipher statistics
-
-OpenDKIM
---------
-
-If ``mta_dkim`` is not false, the settings below become available and OpenDKIM
-will be configured.
-
-* ``mta_dkim_sign`` (bool): Whether the OpenDKIM milter shall sign mail for the
-  domains listed in ``mta_dkim_domains``.
-
-* ``mta_dkim_verify`` (bool): Whether the OpenDKIM milter shall verify mail.
-
-* ``mta_dkim_domains`` (list of hashes): Configuration of keys and domains for
-  automatic DKIM signing. Each entry must have the following keys:
-
-  * ``name`` (string): The domain name to sign for
-  * ``key`` (string): Name part of the key.
-
-  This produces key entries like:
-
-  ``{{ key }}._domainkey.{{ name }}`` and keys must be in
-  ``/etc/opendkim/keys/{{ name }}/{{ key }}.private``.
 
 Safety nets and misc
 --------------------
@@ -270,3 +400,29 @@ Mailman
 
 * ``mta_mailman_script_location`` (string, default ``/usr/lib/mailman/bin/postfix-to-mailman.py``):
   Location of the ``postfix-to-mailman.py`` program.
+
+IPTables based traffic accounting
+---------------------------------
+
+When ferm or nftables is used (``ferm`` or ``nft`` is set to true), the following
+switches can be used to enable the generation of no-op iptables/nftables rules
+whose packet and bytes counters can be used for traffic accounting.
+
+**Note:** Historically, these switches use ``iptables`` in their name; when nft
+is enabled, nft is of course used. It uses a separate `inet accounting` table
+for that.
+
+* ``mta_iptables_inbound_accounting`` (bool, default false): Add rules to
+  account for traffic to and from the local port 25. This effectively tracks
+  inbound SMTP traffic.
+
+* ``mta_iptables_delivery_accounting`` (bool, default false): Add rules to
+  account for traffic to and from remote port 25 and 465. This effectively
+  tracks outbound SMTP traffic.
+
+  Note that if other applications than postfix are sending outbound mails, that
+  traffic will also be caught by these rules.
+
+* ``mta_iptables_submission_accounting`` (bool, default false): Add rules to
+  account for traffic to and from the local 587 port. This effectively tracks
+  submission SMTP traffic.

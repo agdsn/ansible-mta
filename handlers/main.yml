@@ -22,3 +22,6 @@
 
 - name: restart opendkim
   ansible.builtin.service: name=opendkim state=restarted
+
+- name: restart spampd
+  service: name=spampd state=restarted

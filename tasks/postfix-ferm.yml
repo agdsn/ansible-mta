@@ -1,0 +1,17 @@
+---
+- name: "postfix: deploy MTA ferm config"
+  template:
+    src: ferm/mta.conf
+    dest: /etc/ferm/ferm.d/40-postfix-mta.conf
+    owner: root
+    group: root
+  notify: run ferm
+
+- name: "postfix: deploy MSA ferm config"
+  template:
+    src: ferm/msa.conf
+    dest: /etc/ferm/ferm.d/40-postfix-msa.conf
+    owner: root
+    group: root
+  notify: run ferm
+  when: mta_msa

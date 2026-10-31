@@ -1,5 +1,3 @@
-{% if mta_dkim_sign -%}
-{%- for domain in mta_dkim_domains %}
-{{ domain.key }}._domainkey.{{ domain.name }} {{ domain.name }}:{{ domain.key }}:/etc/opendkim/keys/{{ domain.name }}/{{ domain.key }}.private
-{% endfor -%}
-{%- endif %}
+{% for name, info in mta_dkim_keys.items() %}
+{{ name }} {{ info.domain | default(name) }}:{{ 'seq%d-%s' | format(info.seq | default(0), mta_dkim_host_selector) }}:/etc/opendkim/keys/{{ name }}
+{% endfor %}

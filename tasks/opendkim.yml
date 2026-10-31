@@ -1,23 +1,79 @@
 ---
-- name: install packages
-  ansible.builtin.yum: name={{ item }} state=present
+- name: install opendkim
+  apt:
+    name: "{{ item }}"
+    state: latest
+  notify: restart opendkim
   with_items:
-    - opendkim
-  tags:
-    - yum
+  - opendkim
 
-- name: instanciate config
-  ansible.builtin.template: src=opendkim/opendkim.conf dest=/etc/opendkim.conf
+- name: deploy systemd service file
+  template:
+    src: opendkim/opendkim.service
+    dest: /etc/systemd/system/
+  register: service_file
+  notify: restart opendkim
+
+- name: ensure postfix is part of opendkim group
+  user:
+    append: yes
+    name: postfix
+    state: present
+    groups: opendkim
   notify:
-    - restart opendkim
+  - restart postfix
 
-- name: instanciate tables
-  ansible.builtin.template: src=opendkim/{{ item }} dest=/etc/opendkim/
+- name: stop opendkim
+  service:
+    name: opendkim
+    state: stopped
+  when: service_file is changed
+
+- name: reload systemd
+  command: systemctl daemon-reload
+  when: service_file is changed
+  notify: restart opendkim
+
+- name: create config directory tree
+  file:
+    state: directory
+    path: /etc/opendkim/keys/
+    owner: opendkim
+    group: opendkim
+    mode: u=rx,go-rwx
+
+- name: deploy tables
+  template:
+    src: "opendkim/{{ item }}"
+    dest: "/etc/opendkim/{{ item }}"
+    owner: opendkim
+    group: opendkim
+    mode: u=r,go-rwx
+  notify: restart opendkim
   with_items:
-    - SigningTable
-    - KeyTable
-  notify:
-    - restart opendkim
+  - SigningTable
+  - KeyTable
 
-- name: enable and start opendkim
-  ansible.builtin.service: name=opendkim enabled=yes state=started
+- name: upload file keys
+  copy:
+    src: "{{ 'certs/dkim/%s/%d/seq%d-%s.private' | format(item.value.domain | default(item.key), item.value.seq | default(0), item.value.seq | default(0), mta_dkim_host_selector) }}"
+    dest: "/etc/opendkim/keys/{{ item.key }}"
+    owner: opendkim
+    group: opendkim
+    mode: u=r,go-rwx
+  with_dict: "{{ mta_dkim_keys }}"
+  notify: restart opendkim
+
+- name: configure
+  template:
+    src: opendkim/opendkim.conf
+    dest: /etc/opendkim.conf
+    owner: opendkim
+    group: opendkim
+    mode: u=r,go-rwx
+  notify: restart opendkim
+
+- name: enable opendkim
+  service:
+    name: opendkim
+    enabled: yes
