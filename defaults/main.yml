@@ -131,6 +131,7 @@ mta_dkim: False
 mta_dkim_host_selector: "{{ (inventory_hostname.split('.'))[0] }}"
 mta_dkim_mailinglist_mode: False
 mta_dkim_local_signing: false
+mta_dkim_keys: {}
 mta_dkim_domains: []
 
 # Mailman settings
