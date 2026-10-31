@@ -106,7 +106,7 @@ smtpd_tls_cert_file = {{ mta_tls_cert_file }}
 smtpd_tls_cert_file = /etc/postfix/mta.crt
 {% endif %}
 {% if mta_tls_key_file %}
-smtpd_tls_cert_file = {{ mta_tls_key_file }}
+smtpd_tls_key_file = {{ mta_tls_key_file }}
 {% else %}
 smtpd_tls_key_file = /etc/postfix/mta.key
 {% endif %}

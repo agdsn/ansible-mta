@@ -36,6 +36,7 @@ mta_tls_security_level: "may"
 mta_tls_log: False
 mta_tls_cert_file: null
 mta_tls_key_file: null
+mta_tls_dnssec: False
 mta_mynetworks: []
 mta_smtpd_helo_required: False
 mta_strict_rfc821_envelopes: False
@@ -88,6 +89,7 @@ mta_msa_privacy_strip_headers:
 - X-Enigmail
 - X-Originating-IP
 - User-Agent
+mta_msa_tls: "{{ mta_tls }}"
 mta_msa_tls_cert_file: null
 mta_msa_tls_key_file: null
 mta_msa_recipient_restrictions: []

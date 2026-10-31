@@ -53,18 +53,17 @@ smtp      inet  n       -       n       -       -       smtpd {% call smtpd_args
 {% if mta_dkim %}
   -o smtpd_milters=unix:/run/opendkim/opendkim.sock
 {% endif %}
-{% if mta_msa_tls | default(mta_tls) %}
+{% if mta_msa_tls %}
   -o smtpd_tls_security_level=encrypt
   -o smtpd_tls_cert_file={{ '/etc/postfix/msa.crt' if (mta_msa_tls_cert is defined or mta_msa_tls_cert_file) else (mta_tls_cert_file or '/etc/postfix/mta.crt') }}
   -o smtpd_tls_key_file={{ '/etc/postfix/msa.key' if (mta_msa_tls_key is defined or mta_msa_tls_key_file) else (mta_tls_key_file or '/etc/postfix/mta.key') }}
-  -o smtpd_tls_security_level=encrypt
   -o smtpd_tls_auth_only=yes
   -o smtpd_tls_mandatory_ciphers=high
   -o smtpd_tls_mandatory_exclude_ciphers=aNULL,MD5
   -o smtpd_tls_mandatory_protocols=!SSLv2,!SSLv3,!TLSv1,!TLSv1.1
   -o tls_preempt_cipherlist=yes
 {% else %}
-  -o smtpd_lts_security_level=none
+  -o smtpd_tls_security_level=none
 {% endif %}
 {% if mta_msa_privacy %}
   -o cleanup_service_name=privacy-cleanup
