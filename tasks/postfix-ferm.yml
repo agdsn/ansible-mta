@@ -1,6 +1,6 @@
 ---
 - name: "postfix: deploy MTA ferm config"
-  template:
+  ansible.builtin.template:
     src: ferm/mta.conf
     dest: /etc/ferm/ferm.d/40-postfix-mta.conf
     owner: root
@@ -8,7 +8,7 @@
   notify: run ferm
 
 - name: "postfix: deploy MSA ferm config"
-  template:
+  ansible.builtin.template:
     src: ferm/msa.conf
     dest: /etc/ferm/ferm.d/40-postfix-msa.conf
     owner: root

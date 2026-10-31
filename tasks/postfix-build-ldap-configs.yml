@@ -1,6 +1,6 @@
 ---
 - name: "ldap: create configuration"
-  template:
+  ansible.builtin.template:
     src: "postfix/ldap/{{ item.type }}"
     dest: "{{ item.path | default('/etc/postfix/maps/'+(item.name|default())) }}"
     owner: postfix

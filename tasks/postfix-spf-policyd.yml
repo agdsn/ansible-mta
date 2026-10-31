@@ -1,6 +1,6 @@
 ---
 - name: install policy daemon
-  apt:
+  ansible.builtin.apt:
     name: "{{ item }}"
     state: latest
   with_items:
@@ -9,7 +9,7 @@
   - reload postfix
 
 - name: deploy configuration
-  template:
+  ansible.builtin.template:
     src: spf/policyd-spf.conf
     dest: /etc/postfix-policyd-spf-python/policyd-spf.conf
     owner: root

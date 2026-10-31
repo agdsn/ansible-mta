@@ -1,6 +1,6 @@
 ---
 - name: "spampd: install spampd"
-  apt:
+  ansible.builtin.apt:
     name: "{{ item }}"
     state: latest
   with_items:
@@ -9,14 +9,14 @@
   - apt
 
 - name: "spampd: configure spampd"
-  template:
+  ansible.builtin.template:
     src: spampd/default.j2
     dest: /etc/default/spampd
   notify:
   - restart spampd
 
 - name: "spampd: enable and start spampd"
-  service:
+  ansible.builtin.service:
     name: spampd
     state: started
     enabled: yes

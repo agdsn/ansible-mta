@@ -1,16 +1,16 @@
 ---
-- include: spampd.yml
+- ansible.builtin.import_tasks: spampd.yml
   when: mta_spampd
   tags:
   - mta
   - spampd
 
-- import_tasks: postfix.yml
+- ansible.builtin.import_tasks: postfix.yml
   tags:
   - mta
   - postfix
 
-- import_tasks: opendkim.yml
+- ansible.builtin.import_tasks: opendkim.yml
   when: mta_dkim | default(False)
   tags:
   - mta

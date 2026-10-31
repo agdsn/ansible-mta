@@ -1,5 +1,5 @@
 - name: "postfix: deploy MTA nft config"
-  template:
+  ansible.builtin.template:
     src: nft/mta.conf
     dest: /etc/nft.d/40-postfix-mta.conf
     owner: root
@@ -8,7 +8,7 @@
   - reload nft
 
 - name: "postfix: deploy MSA nft config"
-  template:
+  ansible.builtin.template:
     src: nft/msa.conf
     dest: /etc/nft.d/40-postfix-msa.conf
     owner: root

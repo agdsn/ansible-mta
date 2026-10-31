@@ -28,7 +28,7 @@
                                       | map('split', ' = ', 1)) }}"
 
 - name: "postfix: deploy privacy header checks"
-  template:
+  ansible.builtin.template:
     src: postfix/privacy_header_checks.pcre
     dest: /etc/postfix/
   when: mta_msa_privacy
@@ -126,7 +126,7 @@
     - postfix_virtual_map
 
 - name: "postfix: create map directory"
-  file:
+  ansible.builtin.file:
     state: directory
     path: /etc/postfix/maps/
     owner: postfix
@@ -139,27 +139,27 @@
   - postfix-map-ldap
 
 - name: "postfix: hack to ensure that aliases.db can be written by postfix"
-  command: chown postfix:postfix /etc/aliases.db
+  ansible.builtin.command: chown postfix:postfix /etc/aliases.db
   failed_when: False
   tags:
   - postfix-map
   - postfix-map-hash
 
 - name: "postfix: build hashes"
-  include: postfix-build-hashes.yml
+  ansible.builtin.import_tasks: postfix-build-hashes.yml
   tags:
   - postfix-map
   - postfix-map-hash
 
 - name: "postfix: build rfc address tables"
-  include: postfix-build-rfc-address-tables.yml
+  ansible.builtin.import_tasks: postfix-build-rfc-address-tables.yml
   tags:
   - postfix-map
   - postfix-map-hash
   - postfix-map-rfc
 
 - name: "postfix: build ldap configurations"
-  include: postfix-build-ldap-configs.yml
+  ansible.builtin.import_tasks: postfix-build-ldap-configs.yml
   tags:
   - postfix-map
   - postfix-map-ldap
@@ -191,7 +191,7 @@
 - name: deploy sasl password map for relaying
   ansible.builtin.template: src=postfix/password_map
             dest="{{ mta_relayhost_auth_mapfile }}"
-  when: mta_relayhost and mta_relayhost_auth_username
+  when: mta_relayhost is truthy and mta_relayhost_auth_username is truthy
   register: password_map
   notify:
     - reload postfix
@@ -203,26 +203,26 @@
     - reload postfix
 
 - name: "postfix: upload MTA certificate"
-  copy:
+  ansible.builtin.copy:
     content: "{{ mta_tls_cert }}"
     dest: /etc/postfix/mta.crt
     owner: root
     group: root
     mode: ugo=r
-  when: mta_listen and mta_tls and not mta_tls_cert_file and mta_tls_cert | default(false)
+  when: mta_listen and mta_tls and not mta_tls_cert_file and mta_tls_cert | default(false) is truthy
   notify:
   - reload postfix
   tags:
   - certificate
 
 - name: "postfix: upload MTA key"
-  copy:
+  ansible.builtin.copy:
     content: "{{ mta_tls_key }}"
     dest: /etc/postfix/mta.key
     owner: root
     group: root
     mode: u=r,go-rwx
-  when: mta_listen and mta_tls and not mta_tls_key_file and mta_tls_key | default(false)
+  when: mta_listen and mta_tls and not mta_tls_key_file and mta_tls_key | default(false) is truthy
   notify:
   - reload postfix
   tags:
@@ -230,7 +230,7 @@
   - requires-secrets
 
 - name: "postfix: upload MSA certificate"
-  copy:
+  ansible.builtin.copy:
     content: "{{ mta_msa_tls_cert }}"
     dest: /etc/postfix/msa.crt
     owner: root
@@ -243,7 +243,7 @@
   - certificate
 
 - name: "postfix: link MSA certificate"
-  file:
+  ansible.builtin.file:
     state: link
     src: "{{ mta_msa_tls_cert_file }}"
     dest: /etc/postfix/msa.crt
@@ -255,7 +255,7 @@
   - certificate
 
 - name: "postfix: upload MSA key"
-  copy:
+  ansible.builtin.copy:
     content: "{{ mta_msa_tls_key }}"
     dest: /etc/postfix/msa.key
     owner: root
@@ -269,7 +269,7 @@
   - requires-secrets
 
 - name: "postfix: link MSA key"
-  file:
+  ansible.builtin.file:
     state: link
     src: "{{ mta_msa_tls_key_file }}"
     dest: /etc/postfix/msa.key
@@ -280,18 +280,18 @@
   tags:
   - certificate
 
-- include: postfix-spf-policyd.yml
+- ansible.builtin.import_tasks: postfix-spf-policyd.yml
   when: mta_spf
   tags:
   - postfix
   - postfix-spf
 
-- include: postfix-ferm.yml
+- ansible.builtin.import_tasks: postfix-ferm.yml
   when: "ferm | default(False)"
   tags:
   - ferm
 
-- include: postfix-nft.yml
+- ansible.builtin.import_tasks: postfix-nft.yml
   when: "nft | default(False)"
   tags:
   - nft
@@ -300,7 +300,7 @@
   ansible.builtin.service: name=postfix state=started enabled=yes
 
 - name: "postfix: upload collectd scripts"
-  copy:
+  ansible.builtin.copy:
     src: queuesize.sh
     dest: /usr/local/bin/
     mode: ugo=rx

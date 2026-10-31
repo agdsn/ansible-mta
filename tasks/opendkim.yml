@@ -1,6 +1,6 @@
 ---
 - name: install opendkim
-  apt:
+  ansible.builtin.apt:
     name: "{{ item }}"
     state: latest
   notify: restart opendkim
@@ -8,14 +8,14 @@
   - opendkim
 
 - name: deploy systemd service file
-  template:
+  ansible.builtin.template:
     src: opendkim/opendkim.service
     dest: /etc/systemd/system/
   register: service_file
   notify: restart opendkim
 
 - name: ensure postfix is part of opendkim group
-  user:
+  ansible.builtin.user:
     append: yes
     name: postfix
     state: present
@@ -24,18 +24,18 @@
   - restart postfix
 
 - name: stop opendkim
-  service:
+  ansible.builtin.service:
     name: opendkim
     state: stopped
   when: service_file is changed
 
 - name: reload systemd
-  command: systemctl daemon-reload
+  ansible.builtin.command: systemctl daemon-reload
   when: service_file is changed
   notify: restart opendkim
 
 - name: create config directory tree
-  file:
+  ansible.builtin.file:
     state: directory
     path: /etc/opendkim/keys/
     owner: opendkim
@@ -43,7 +43,7 @@
     mode: u=rx,go-rwx
 
 - name: deploy tables
-  template:
+  ansible.builtin.template:
     src: "opendkim/{{ item }}"
     dest: "/etc/opendkim/{{ item }}"
     owner: opendkim
@@ -55,7 +55,7 @@
   - KeyTable
 
 - name: upload file keys
-  copy:
+  ansible.builtin.copy:
     src: "{{ 'certs/dkim/%s/%d/seq%d-%s.private' | format(item.value.domain | default(item.key), item.value.seq | default(0), item.value.seq | default(0), mta_dkim_host_selector) }}"
     dest: "/etc/opendkim/keys/{{ item.key }}"
     owner: opendkim
@@ -65,7 +65,7 @@
   notify: restart opendkim
 
 - name: configure
-  template:
+  ansible.builtin.template:
     src: opendkim/opendkim.conf
     dest: /etc/opendkim.conf
     owner: opendkim
@@ -74,6 +74,6 @@
   notify: restart opendkim
 
 - name: enable opendkim
-  service:
+  ansible.builtin.service:
     name: opendkim
     enabled: yes
