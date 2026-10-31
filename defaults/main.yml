@@ -46,8 +46,8 @@ mta_soft_bounce: False
 mta_relay_domains: []
 mta_access_databases: {}
 mta_alias_database: []
-mta_maps: {}
-mta_ldaps: {}
+mta_hashes: []
+mta_ldaps: []
 mta_virtual_maps: []
 mta_virtual_alias_maps: []
 mta_alias_maps:
