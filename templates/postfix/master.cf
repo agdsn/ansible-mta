@@ -10,14 +10,14 @@
 #               (yes)   (yes)   (yes)   (never) (100)
 # ==========================================================================
 {% macro smtpd_args(caller=None) -%}
-{% if mta_spampd -%}
-  -o smtpd_proxy_filter=127.0.0.1:{{ mta_spampd_port }}
-  -o smtpd_proxy_options=speed_adjust
-{%- endif %}
-{% if mta_rspamd -%}
-  -o smtpd_milters=inet:127.0.0.1:{{ mta_rspamd_port }}
-  -o milter_default_action=accept
-{%- endif %}
+{% set args = [] %}
+{% if mta_spampd %}
+{% set args = args + ['-o smtpd_proxy_filter=127.0.0.1:' ~ mta_spampd_port, '-o smtpd_proxy_options=speed_adjust'] %}
+{% endif %}
+{% if mta_rspamd %}
+{% set args = args + ['-o smtpd_milters=inet:127.0.0.1:' ~ mta_rspamd_port, '-o milter_default_action=accept'] %}
+{% endif %}
+{{ args | join('\n  ') }}
 {%- endmacro -%}
 
 {% if mta_listen %}
