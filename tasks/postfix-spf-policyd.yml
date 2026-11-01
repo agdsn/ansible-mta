@@ -1,10 +1,8 @@
 ---
 - name: install policy daemon
-  ansible.builtin.apt:
-    name: "{{ item }}"
-    state: latest
-  with_items:
-  - postfix-policyd-spf-python
+  ansible.builtin.package:
+    name: postfix-policyd-spf-python
+    state: present
   notify:
   - reload postfix
 

@@ -1,11 +1,9 @@
 ---
 - name: install opendkim
-  ansible.builtin.apt:
-    name: "{{ item }}"
-    state: latest
+  ansible.builtin.package:
+    name: opendkim
+    state: present
   notify: restart opendkim
-  with_items:
-  - opendkim
 
 - name: deploy systemd service file
   ansible.builtin.template:
