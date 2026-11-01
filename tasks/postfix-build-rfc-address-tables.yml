@@ -1,5 +1,5 @@
 ---
-- name: "rfc addresses: create table"
+- name: "Rfc addresses: create table"
   ansible.builtin.template:
     src: "postfix/table/rfc-addresses"
     dest: "/etc/postfix/maps/rfc-addresses.hash"
@@ -8,9 +8,9 @@
     mode: ug=r,o-rwx
   register: rfc_table
 
-- name: "rfc addresses: compile table"
+- name: "Rfc addresses: compile table"
   ansible.builtin.command: "postmap /etc/postfix/maps/rfc-addresses.hash"
   changed_when: true
   when: "rfc_table is changed or map_infrastructure is changed"
   notify:
-    - reload postfix
+    - Reload postfix

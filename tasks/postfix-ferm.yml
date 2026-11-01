@@ -1,9 +1,9 @@
 ---
-- name: "postfix: set up ferm hook"
+- name: "Postfix: set up ferm hook"
   ansible.builtin.include_role:
     name: ferm-hook
 
-- name: "postfix: deploy MTA ferm config"
+- name: "Postfix: deploy MTA ferm config"
   ansible.builtin.template:
     src: ferm/mta.conf
     dest: /etc/ferm/ferm.d/40-postfix-mta.conf
@@ -12,7 +12,7 @@
     group: root
   notify: run ferm
 
-- name: "postfix: deploy MSA ferm config"
+- name: "Postfix: deploy MSA ferm config"
   ansible.builtin.template:
     src: ferm/msa.conf
     dest: /etc/ferm/ferm.d/40-postfix-msa.conf

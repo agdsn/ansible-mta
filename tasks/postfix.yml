@@ -3,7 +3,7 @@
 #   command: hostnamectl --static set-hostname {{ inventory_hostname }}
 
 
-- name: install packages
+- name: Install packages
   ansible.builtin.package:
     name:
       - postfix
@@ -13,21 +13,21 @@
   tags:
     - apt
   notify:
-    - restart postfix
+    - Restart postfix
 
-- name: discover default configuration values
+- name: Discover default configuration values
   ansible.builtin.command: postconf -d
   register: _postfix_config_defaults
   changed_when: false
   check_mode: false
 
-- name: register default configuration values
+- name: Register default configuration values
   ansible.builtin.set_fact:
     postfix_config_defaults: "{{ dict(_postfix_config_defaults.stdout_lines
                                       | map('regex_replace', '^(\\w+ =)$', '\\1 ')
                                       | map('split', ' = ', 1)) }}"
 
-- name: "postfix: deploy privacy header checks"
+- name: "Postfix: deploy privacy header checks"
   ansible.builtin.template:
     src: postfix/privacy_header_checks.pcre
     dest: /etc/postfix/
@@ -36,9 +36,9 @@
   tags:
     - postfix
   notify:
-    - reload postfix
+    - Reload postfix
 
-- name: instanciate config files
+- name: Instanciate config files
   ansible.builtin.template:
     src: postfix/{{ item }}
     dest: /etc/postfix/{{ item }}
@@ -51,9 +51,9 @@
     - postfix
     - psotfix-spf
   notify:
-    - restart postfix
+    - Restart postfix
 
-- name: generate additional config files
+- name: Generate additional config files
   ansible.builtin.template:
     src: postfix/config
     dest: /etc/postfix/{{ item.name }}
@@ -62,9 +62,9 @@
     group: root
   with_items: "{{ mta_config_files }}"
   notify:
-    - restart postfix
+    - Restart postfix
 
-- name: create policy and access database directories
+- name: Create policy and access database directories
   ansible.builtin.file:
     path: "/etc/postfix/{{ item }}"
     state: directory
@@ -79,7 +79,7 @@
     - policy.d/relay_restrictions
     - policy.d/recipient_restrictions
 
-- name: update access databases
+- name: Update access databases
   ansible.builtin.template:
     src: postfix/access
     dest: "{{ item.key }}"
@@ -89,15 +89,15 @@
   with_dict: "{{ mta_access_databases }}"
   register: access_database_update
 
-- name: compile access databases
+- name: Compile access databases
   ansible.builtin.command: postmap "{{ '%s:%s' | format(item.item.value.type, item.item.key) }}"
   changed_when: true
   when: item is changed  # noqa: no-handler
   with_items: "{{ access_database_update.results | default([]) }}"
   notify:
-    - reload postfix
+    - Reload postfix
 
-- name: update alias tables
+- name: Update alias tables
   ansible.builtin.template:
     src: postfix/aliases
     dest: "{{ item.file }}"
@@ -109,17 +109,17 @@
     - postfix_virtual_map
   register: alias_map_update
 
-- name: compile alias tables
+- name: Compile alias tables
   ansible.builtin.command: postalias "{{ '%s:%s' | format(item.item.type, item.item.file) }}"
   changed_when: true
   when: item is changed  # noqa: no-handler
   with_items: "{{ alias_map_update.results | default([]) }}"
   notify:
-    - reload postfix
+    - Reload postfix
   tags:
     - postfix_virtual_map
 
-- name: update virtual tables
+- name: Update virtual tables
   ansible.builtin.template:
     src: postfix/virtual
     dest: /etc/postfix/virtual_{{ item.domain }}
@@ -130,17 +130,17 @@
     - postfix_virtual_map
   register: virtual_map_update
 
-- name: compile virtual tables
+- name: Compile virtual tables
   ansible.builtin.command: postmap /etc/postfix/virtual_{{ item.item.domain }}
   changed_when: true
   when: item is changed  # noqa: no-handler
   with_items: "{{ virtual_map_update.results | default([]) }}"
   notify:
-    - reload postfix
+    - Reload postfix
   tags:
     - postfix_virtual_map
 
-- name: "postfix: create map directory"
+- name: "Postfix: create map directory"
   ansible.builtin.file:
     state: directory
     path: /etc/postfix/maps/
@@ -153,7 +153,7 @@
     - postfix-map-hash
     - postfix-map-ldap
 
-- name: "postfix: hack to ensure that aliases.db can be written by postfix"
+- name: "Postfix: hack to ensure that aliases.db can be written by postfix"
   ansible.builtin.command: chown postfix:postfix /etc/aliases.db
   changed_when: false
   failed_when: false
@@ -161,44 +161,44 @@
     - postfix-map
     - postfix-map-hash
 
-- name: "postfix: build hashes"
+- name: "Postfix: build hashes"
   ansible.builtin.import_tasks: postfix-build-hashes.yml
   tags:
     - postfix-map
     - postfix-map-hash
 
-- name: "postfix: build rfc address tables"
+- name: "Postfix: build rfc address tables"
   ansible.builtin.import_tasks: postfix-build-rfc-address-tables.yml
   tags:
     - postfix-map
     - postfix-map-hash
     - postfix-map-rfc
 
-- name: "postfix: build ldap configurations"
+- name: "Postfix: build ldap configurations"
   ansible.builtin.import_tasks: postfix-build-ldap-configs.yml
   tags:
     - postfix-map
     - postfix-map-ldap
 
-- name: create alias include dir
+- name: Create alias include dir
   ansible.builtin.file:
     path: /etc/postfix/aliases.d/
     mode: "0755"
     state: directory
 
-- name: create placeholder file
+- name: Create placeholder file
   ansible.builtin.copy:
     dest: /etc/postfix/aliases.d/placeholder.aliases
     mode: "0644"
     content: ""
 
-- name: force alias includer generation at this point
+- name: Force alias includer generation at this point
   ansible.builtin.command: /bin/true
   changed_when: true
   notify:
-    - update include alias file
+    - Update include alias file
 
-- name: update transport map
+- name: Update transport map
   ansible.builtin.template:
     src: postfix/transport_map
     dest: /etc/postfix/transports
@@ -208,14 +208,14 @@
     - postfix_transport_map
   register: postfix_transport_map
 
-- name: compile transport map
+- name: Compile transport map
   ansible.builtin.command: postmap /etc/postfix/transports
   changed_when: true
   when: postfix_transport_map is changed  # noqa: no-handler
   tags:
     - postfix_transport_map
 
-- name: deploy sasl password map for relaying
+- name: Deploy sasl password map for relaying
   ansible.builtin.template:
     src: postfix/password_map
     dest: "{{ mta_relayhost_auth_mapfile }}"
@@ -223,16 +223,16 @@
   when: mta_relayhost is truthy and mta_relayhost_auth_username is truthy
   register: password_map
   notify:
-    - reload postfix
+    - Reload postfix
 
-- name: compile sasl password map for relaying
+- name: Compile sasl password map for relaying
   ansible.builtin.command: postmap "{{ mta_relayhost_auth_mapfile }}"
   changed_when: true
   when: password_map is changed  # noqa: no-handler
   notify:
-    - reload postfix
+    - Reload postfix
 
-- name: "postfix: upload MTA certificate"
+- name: "Postfix: upload MTA certificate"
   ansible.builtin.copy:
     content: "{{ mta_tls_cert }}"
     dest: /etc/postfix/mta.crt
@@ -241,11 +241,11 @@
     mode: ugo=r
   when: mta_listen and mta_tls and not mta_tls_cert_file and mta_tls_cert | default(false) is truthy
   notify:
-    - reload postfix
+    - Reload postfix
   tags:
     - certificate
 
-- name: "postfix: upload MTA key"
+- name: "Postfix: upload MTA key"
   ansible.builtin.copy:
     content: "{{ mta_tls_key }}"
     dest: /etc/postfix/mta.key
@@ -254,12 +254,12 @@
     mode: u=r,go-rwx
   when: mta_listen and mta_tls and not mta_tls_key_file and mta_tls_key | default(false) is truthy
   notify:
-    - reload postfix
+    - Reload postfix
   tags:
     - certificate
     - requires-secrets
 
-- name: "postfix: upload MSA certificate"
+- name: "Postfix: upload MSA certificate"
   ansible.builtin.copy:
     content: "{{ mta_msa_tls_cert }}"
     dest: /etc/postfix/msa.crt
@@ -268,11 +268,11 @@
     mode: u=r,go-rwx
   when: "mta_msa and mta_msa_tls and not mta_msa_tls_cert_file and mta_msa_tls_cert is defined"
   notify:
-    - reload postfix
+    - Reload postfix
   tags:
     - certificate
 
-- name: "postfix: link MSA certificate"
+- name: "Postfix: link MSA certificate"
   ansible.builtin.file:
     state: link
     src: "{{ mta_msa_tls_cert_file }}"
@@ -280,11 +280,11 @@
     force: true
   when: "mta_msa and mta_msa_tls and not not mta_msa_tls_cert_file"
   notify:
-    - reload postfix
+    - Reload postfix
   tags:
     - certificate
 
-- name: "postfix: upload MSA key"
+- name: "Postfix: upload MSA key"
   ansible.builtin.copy:
     content: "{{ mta_msa_tls_key }}"
     dest: /etc/postfix/msa.key
@@ -293,12 +293,12 @@
     mode: u=r,go-rwx
   when: "mta_msa and mta_msa_tls and not mta_msa_tls_key_file and mta_msa_tls_key is defined"
   notify:
-    - reload postfix
+    - Reload postfix
   tags:
     - certificate
     - requires-secrets
 
-- name: "postfix: link MSA key"
+- name: "Postfix: link MSA key"
   ansible.builtin.file:
     state: link
     src: "{{ mta_msa_tls_key_file }}"
@@ -306,7 +306,7 @@
     force: true
   when: "mta_msa and mta_msa_tls and not not mta_msa_tls_key_file"
   notify:
-    - reload postfix
+    - Reload postfix
   tags:
     - certificate
 
@@ -329,13 +329,13 @@
   tags:
     - nft
 
-- name: start and enable postfix
+- name: Start and enable postfix
   ansible.builtin.service:
     name: postfix
     state: started
     enabled: true
 
-- name: "postfix: upload collectd scripts"
+- name: "Postfix: upload collectd scripts"
   ansible.builtin.copy:
     src: queuesize.sh
     dest: /usr/local/bin/

@@ -1,20 +1,20 @@
 ---
-- name: "spampd: install spampd"
+- name: "Spampd: install spampd"
   ansible.builtin.package:
     name: spampd
     state: present
   tags:
     - apt
 
-- name: "spampd: configure spampd"
+- name: "Spampd: configure spampd"
   ansible.builtin.template:
     src: spampd/default.j2
     dest: /etc/default/spampd
     mode: "0644"
   notify:
-    - restart spampd
+    - Restart spampd
 
-- name: "spampd: enable and start spampd"
+- name: "Spampd: enable and start spampd"
   ansible.builtin.service:
     name: spampd
     state: started
