@@ -1,0 +1,11 @@
+---
+- name: "Ldap: create configuration"
+  ansible.builtin.template:
+    src: "postfix/ldap/{{ item.type }}"
+    dest: "{{ item.path | default('/etc/postfix/maps/' + (item.name | default())) }}"
+    owner: postfix
+    group: postfix
+    mode: ug=r,o-rwx
+  with_items: "{{ mta_ldaps }}"
+  notify:
+    - Reload postfix

@@ -9,19 +9,66 @@
 # service type  private unpriv  chroot  wakeup  maxproc command + args
 #               (yes)   (yes)   (yes)   (never) (100)
 # ==========================================================================
+{% macro smtpd_args(caller=None) -%}
+{% set args = [] %}
+{% if mta_spampd %}
+{% set args = args + ['-o smtpd_proxy_filter=127.0.0.1:' ~ mta_spampd_port, '-o smtpd_proxy_options=speed_adjust'] %}
+{% endif %}
+{% if mta_rspamd %}
+{% set args = args + ['-o smtpd_milters=inet:127.0.0.1:' ~ mta_rspamd_port, '-o milter_default_action=accept'] %}
+{% endif %}
+{{ args | join('\n  ') }}
+{%- endmacro %}
+
 {% if mta_listen %}
 {% if mta_postscreen %}
 smtp      inet  n       -       n       -       1       postscreen
-smtpd     pass  -       -       n       -       -       smtpd
+smtpd     pass  -       -       n       -       -       smtpd {% call smtpd_args() %}{% endcall %}
+
 dnsblog   unix  -       -       n       -       0       dnsblog
 tlsproxy  unix  -       -       n       -       0       tlsproxy
-{%- else %}
-smtp      inet  n       -       n       -       -       smtpd
-{%- endif %}
-{%- endif %}
+{% else %}
+smtp      inet  n       -       n       -       -       smtpd {% call smtpd_args() %}{% endcall %}
 
-{% if mta_msa -%}
-submission inet n       -       n       -       -       smtpd
+{% endif %}
+
+{% endif %}
+{% if mta_dkim_local_signing %}
+2525  inet    n   -   n   -   -   smtpd
+  -o smtpd_milters=unix:/run/opendkim/opendkim.sock
+
+{% endif %}
+{% if mta_msa %}
+{% if mta_msa_proxy %}127.0.0.1:1587{% else %}submission{% endif %} inet n       -       n       -       -       smtpd
+{% if not mta_msa_proxy %}
+  -o smtpd_client_restrictions=permit_sasl_authenticated,reject
+{% endif %}
+{% if mta_msa_proxy %}
+  -o smtpd_authorized_xclient_hosts=127.0.0.0/8
+{% endif %}
+{% if mta_msa_sasl_type and mta_msa_sasl_path %}
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_sasl_type={{ mta_msa_sasl_type }}
+  -o smtpd_sasl_path={{ mta_msa_sasl_path }}
+{% endif %}
+{% if mta_dkim %}
+  -o smtpd_milters=unix:/run/opendkim/opendkim.sock
+{% endif %}
+{% if mta_msa_tls %}
+  -o smtpd_tls_security_level=encrypt
+  -o smtpd_tls_cert_file={{ '/etc/postfix/msa.crt' if (mta_msa_tls_cert is defined or mta_msa_tls_cert_file) else (mta_tls_cert_file or '/etc/postfix/mta.crt') }}
+  -o smtpd_tls_key_file={{ '/etc/postfix/msa.key' if (mta_msa_tls_key is defined or mta_msa_tls_key_file) else (mta_tls_key_file or '/etc/postfix/mta.key') }}
+  -o smtpd_tls_auth_only=yes
+  -o smtpd_tls_mandatory_ciphers=high
+  -o smtpd_tls_mandatory_exclude_ciphers=aNULL,MD5
+  -o smtpd_tls_mandatory_protocols=!SSLv2,!SSLv3,!TLSv1,!TLSv1.1
+  -o tls_preempt_cipherlist=yes
+{% else %}
+  -o smtpd_tls_security_level=none
+{% endif %}
+{% if mta_msa_privacy %}
+  -o cleanup_service_name=privacy-cleanup
+{% endif %}
 {% for key, value in mta_msa_options|dictsort %}
   {% if value is sequence and value is not string %}
   -o {{ key }}={{ value | join(',') }}
@@ -29,16 +76,26 @@ submission inet n       -       n       -       -       smtpd
   -o {{ key }}={{ value }}
   {% endif %}
 {% endfor %}
-{% if mta_msa_sasl_type and mta_msa_sasl_path %}
-  -o smtpd_sasl_auth_enable=yes
-  -o smtpd_sasl_type={{ mta_msa_sasl_type }}
-  -o smtpd_sasl_path={{ mta_msa_sasl_path }}
-{%- endif %}
-{% if mta_dkim and mta_msa_dkim %}
-  -o smtpd_milters=inet:127.0.0.1:8891
-{%- endif %}
-{%- endif %}
 
+{% endif %}
+{% if mta_spampd %}
+127.0.0.1:{{ mta_proxy_sink_port }} inet n - n - -      smtpd
+  -o smtpd_authorized_xforward_hosts=127.0.0.0/8
+  -o smtpd_client_restrictions=
+  -o smtpd_helo_restrictions=
+  -o smtpd_sender_restrictions=
+  -o smtpd_relay_restrictions=
+  -o smtpd_recipient_restrictions=permit_mynetworks,reject
+  -o mynetworks=127.0.0.0/8
+  -o receive_override_options=no_unknown_recipient_checks
+  -o syslog_name=postfix/post-filters
+
+{% endif %}
+{% if mta_spf %}
+spf unix - n n - - spawn
+  user=nobody argv=/usr/bin/policyd-spf
+
+{% endif %}
 #628       inet  n       -       n       -       -       qmqpd
 pickup    unix  n       -       n       60      1       pickup
 {% if mta_local_canonical_header_checks or mta_local_sender_canonical_maps or mta_local_recipient_canonical_maps %}
@@ -76,8 +133,24 @@ virtual   unix  -       n       n       -       -       virtual
 lmtp      unix  -       -       n       -       -       lmtp
 anvil     unix  -       -       n       -       1       anvil
 scache    unix  -       -       n       -       1       scache
+{% if mta_delivery_type == "agent_transport" and mta_delivery_agent %}
+{% if mta_delivery_agent == "dovecot" %}
+dovecot   unix  -       n       n       -       -       pipe
+    flags=ODRhuX user=vmail:mail argv=/usr/lib{% if ansible_os_family == "RedHat" %}exec{% endif %}/dovecot/deliver -f ${sender} -d ${user} -a ${recipient}
+{% endif %}
+{% endif %}
+{% if mta_msa_privacy %}
+privacy-cleanup unix n - - - 0 cleanup
+    -o syslog_name=postfix/privacy-cleanup
+    -o header_checks=pcre:/etc/postfix/privacy_header_checks.pcre
+{% endif %}
+{% for service in mta_additional_services + mta_services %}
+{% if loop.first %}
 
-{% for service in mta_services %}
+{% endif %}
+{% if service is string %}
+{{ service }}
+{% else %}
 {{ service.service }} {{ service.type }} {{ service.private | default('-') }} {{ service.unpriv | default('-') }} {{ service.chroot | default('n') }} {{ service.wakeup | default('-') }} {{ service.maxproc | default('-') }} {{ service.command }}
   {% if service.command_attributes is defined %}
     {% for command_attribute in service.command_attributes %}
@@ -102,6 +175,7 @@ scache    unix  -       -       n       -       1       scache
       {{ ' }\n' }}
     {%- endfor %}
   {% endif %}
+{% endif %}
 {% endfor %}
 
 #
@@ -167,12 +241,3 @@ scache    unix  -       -       n       -       1       scache
 #  flags=R user=scalemail argv=/usr/lib/scalemail/bin/scalemail-store
 #  ${nexthop} ${user} ${extension}
 #
-{% if mta_use_mailman %}
-mailman   unix  -       n       n       -       -       pipe
-  flags=FR user=list argv={{ mta_mailman_script_location }}
-  ${nexthop} ${user}
-{% endif %}
-{% for pipe in mta_pipe_transports %}
-{{ pipe.name }}      unix  -       n       n       -       1       pipe
-  flags={{ pipe.flags }} user={{ pipe.user }} argv={{ pipe.argv }}
-{% endfor %}

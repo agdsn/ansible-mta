@@ -1,4 +1,20 @@
 ---
-- import_tasks: postfix.yml
-- import_tasks: opendkim.yml
+- name: Import spampd task set
+  ansible.builtin.import_tasks: spampd.yml
+  when: mta_spampd
+  tags:
+    - mta
+    - spampd
+
+- name: Import postfix task set
+  ansible.builtin.import_tasks: postfix.yml
+  tags:
+    - mta
+    - postfix
+
+- name: Import opendkim task set
+  ansible.builtin.import_tasks: opendkim.yml
   when: mta_dkim | default(False)
+  tags:
+    - mta
+    - opendkim

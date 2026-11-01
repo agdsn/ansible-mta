@@ -1,19 +1,15 @@
 ---
-mta_access_databases: {}
-mta_alias_database: []
-mta_alias_maps:
-  - "$alias_database"
-  - hash:/etc/postfix/aliases
-mta_local_canonical_myorigin: ""
-mta_local_sender_canonical_maps: []
-mta_local_recipient_canonical_maps: []
-mta_local_canonical_header_checks: []
+mta_override_destination: []
 mta_relayhost: false
-mta_relayhost_auth_username: false
-mta_relayhost_auth_mapfile: /etc/postfix/password_map
+# mta_relayhost_auth (mapping with username/mapfile) and mta_relayhost_password
+# are deprecated; they are only used as defaults for the variables below.
+mta_relayhost_auth: false
+mta_relayhost_auth_username: "{{ mta_relayhost_auth.username if mta_relayhost_auth else false }}"
+mta_relayhost_auth_password: "{{ mta_relayhost_password if mta_relayhost_auth else false }}"
+mta_relayhost_auth_mapfile: "{{ mta_relayhost_auth.mapfile if mta_relayhost_auth else '/etc/postfix/password_map' }}"
 mta_smtp_tls_wrappermode: false
 mta_smtp_tls_security_level: "may"
-mta_smtp_tls_ca_path: /etc/ssl/certs/
+mta_smtp_tls_ca_path: null
 mta_listen: true
 mta_smtpd_upstream_proxy_protocol: ""
 mta_smtpd_restriction_classes: {}
@@ -28,62 +24,121 @@ mta_smtpd_data_restrictions: []
 mta_smtpd_end_of_data_restrictions: []
 mta_smtpd_etrn_restrictions: []
 mta_smtpd_milters: []
+mta_relay_recipient_maps: []
 mta_domains: []
 mta_virtual_mailbox_domains: []
 mta_virtual_transport: []
 mta_postscreen: false
 mta_delay_warning: false
 mta_disable_vrfy_command: false
-mta_transport_map: {}
+mta_tls: true
 mta_tls_security_level: "may"
 mta_tls_log: false
+mta_tls_cert_file: null
+mta_tls_key_file: null
+mta_tls_dnssec: false
 mta_mynetworks: []
 mta_smtpd_helo_required: false
 mta_strict_rfc821_envelopes: false
+mta_message_size_limit: false
 mta_listen_interfaces:
   - all
 mta_soft_bounce: false
 mta_relay_domains: []
+mta_access_databases: {}
+mta_alias_database: []
+mta_hashes: []
+mta_ldaps: []
 mta_virtual_maps: []
+mta_virtual_alias_maps: []
+mta_alias_maps:
+  - "$alias_database"
+  - hash:/etc/postfix/aliases
+mta_recipient_delimiter: null
+mta_transport_map: {}
+mta_transport_maps: []
+mta_mailbox_transport_maps: []
+mta_additional_services: []
+mta_local_canonical_myorigin: ""
+mta_local_sender_canonical_maps: []
+mta_local_recipient_canonical_maps: []
+mta_local_canonical_header_checks: []
+
+mta_global_rfc_addresses:
+  postmaster:
+    - root
+  abuse:
+    - root
+mta_domain_rfc_addresses: {}
+
+# Local mail delivery
+mta_delivery_type: "local"
+mta_delivery_agent: '{{ "" if not mta_is_destination | default(False) else "dovecot" }}'
+mta_agent_transport_user: "vmail:mail"
 mta_mailbox_command: null
 
 # Mail Submission Agent settings
 mta_msa: false
+mta_msa_proxy: false
 mta_msa_smtpd_client_restrictions: []
 mta_msa_sasl_type: false
 mta_msa_sasl_path: false
-mta_msa_dkim: false
+mta_msa_privacy: false
+mta_msa_privacy_strip_headers:
+  - X-Mailer
+  - X-Enigmail
+  - X-Originating-IP
+  - User-Agent
+mta_msa_tls: "{{ mta_tls }}"
+mta_msa_tls_cert_file: null
+mta_msa_tls_key_file: null
+mta_msa_recipient_restrictions: []
+mta_msa_sender_restrictions: []
+mta_msa_sender_login_maps: []
 mta_msa_options:
-  smtpd_tls_security_level: "encrypt"
-  smtpd_client_restrictions: []
-  smtpd_recipient_restrictions: []
-  smtpd_helo_restrictions: []
-  smtpd_sender_restrictions: []
+  smtpd_recipient_restrictions: $submission_recipient_restrictions
+  smtpd_helo_restrictions: ""
+  smtpd_sender_restrictions: $submission_sender_restrictions
   smtpd_relay_restrictions:
     - permit_sasl_authenticated
     - defer_unauth_destination
+  smtpd_sender_login_maps: $submission_sender_login_maps
+  syslog_name: postfix/submission
 
-# OpenDKIM settings
+# spampd-integration
+mta_spampd: false
+mta_spampd_port: 10026
+mta_spampd_max_children: 5
+mta_spampd_only_local: true
+mta_spampd_max_size: 1024
+
+# rspamd integration
+mta_rspamd: false
+mta_rspamd_port: 11332
+
+mta_proxy_sink_port: 12500
+
+# spf
+mta_spf: false
+
+# iptables-accounting
+mta_iptables_inbound_accounting: false
+mta_iptables_outbound_accounting: false
+mta_iptables_submission_accounting: false
+
+# opendkim-integration
 mta_dkim: false
-mta_dkim_sign: false
-mta_dkim_verify: true
-mta_dkim_selector: "deployment"
+mta_dkim_host_selector: "{{ (inventory_hostname.split('.'))[0] }}"
+mta_dkim_mailinglist_mode: false
+mta_dkim_local_signing: false
+mta_dkim_keys: {}
 mta_dkim_domains: []
 
-# Mailman settings
-mta_use_mailman: false
-mta_mailman_script_location: /etc/mailman/postfix-to-mailman.py
-
 # other
-mta_recipient_delimiter: ""
-mta_message_size_limit: 10240000
-mta_pipe_transports: []
 mta_unverified_recipient_reject_code: 450
-mta_config_files_all: []
 mta_config_files: []
 
 # Additional parameters
-mta_parameters_all: {}
 mta_parameters: {}
 
 # Additional services

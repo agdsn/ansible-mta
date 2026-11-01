@@ -1,23 +1,81 @@
 ---
-- name: install packages
-  ansible.builtin.yum: name={{ item }} state=present
-  with_items:
-    - opendkim
-  tags:
-    - yum
+- name: Install opendkim
+  ansible.builtin.package:
+    name: opendkim
+    state: present
+  notify: Restart opendkim
 
-- name: instanciate config
-  ansible.builtin.template: src=opendkim/opendkim.conf dest=/etc/opendkim.conf
+- name: Deploy systemd service file
+  ansible.builtin.template:
+    src: opendkim/opendkim.service
+    dest: /etc/systemd/system/
+    mode: "0644"
+  register: service_file
+  notify: Restart opendkim
+
+- name: Ensure postfix is part of opendkim group
+  ansible.builtin.user:
+    append: true
+    name: postfix
+    state: present
+    groups: opendkim
   notify:
-    - restart opendkim
+    - Restart postfix
 
-- name: instanciate tables
-  ansible.builtin.template: src=opendkim/{{ item }} dest=/etc/opendkim/
+- name: Stop opendkim
+  ansible.builtin.service:
+    name: opendkim
+    state: stopped
+  when: service_file is changed  # noqa: no-handler
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: service_file is changed  # noqa: no-handler
+  notify: Restart opendkim
+
+- name: Create config directory tree
+  ansible.builtin.file:
+    state: directory
+    path: /etc/opendkim/keys/
+    owner: opendkim
+    group: opendkim
+    mode: u=rx,go-rwx
+
+- name: Deploy tables
+  ansible.builtin.template:
+    src: "opendkim/{{ item }}"
+    dest: "/etc/opendkim/{{ item }}"
+    owner: opendkim
+    group: opendkim
+    mode: u=r,go-rwx
+  notify: Restart opendkim
   with_items:
     - SigningTable
     - KeyTable
-  notify:
-    - restart opendkim
 
-- name: enable and start opendkim
-  ansible.builtin.service: name=opendkim enabled=yes state=started
+- name: Upload file keys
+  ansible.builtin.copy:
+    src: >-
+      {{ 'certs/dkim/%s/%d/seq%d-%s.private' | format(item.value.domain | default(item.key),
+      item.value.seq | default(0), item.value.seq | default(0), mta_dkim_host_selector) }}
+    dest: "/etc/opendkim/keys/{{ item.key }}"
+    owner: opendkim
+    group: opendkim
+    mode: u=r,go-rwx
+  with_dict: "{{ mta_dkim_keys }}"
+  notify: Restart opendkim
+
+- name: Configure
+  ansible.builtin.template:
+    src: opendkim/opendkim.conf
+    dest: /etc/opendkim.conf
+    owner: opendkim
+    group: opendkim
+    mode: u=r,go-rwx
+  notify: Restart opendkim
+
+- name: Enable opendkim
+  ansible.builtin.service:
+    name: opendkim
+    enabled: true

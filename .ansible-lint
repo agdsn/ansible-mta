@@ -1,0 +1,4 @@
+---
+skip_list:
+  # The role is not published on Ansible Galaxy, so there is no namespace.
+  - role-name

@@ -1,0 +1,17 @@
+---
+- name: Install policy daemon
+  ansible.builtin.package:
+    name: postfix-policyd-spf-python
+    state: present
+  notify:
+    - Reload postfix
+
+- name: Deploy configuration
+  ansible.builtin.template:
+    src: spf/policyd-spf.conf
+    dest: /etc/postfix-policyd-spf-python/policyd-spf.conf
+    owner: root
+    group: root
+    mode: u=rw,go=r
+  notify:
+    - Reload postfix
