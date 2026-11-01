@@ -27,6 +27,13 @@
                                       | map('regex_replace', '^(\\w+ =)$', '\\1 ')
                                       | map('split', ' = ', 1)) }}"
 
+- name: Check compatibility level
+  ansible.builtin.fail:
+    msg: "Postfix {{ postfix_config_defaults.mail_version }} requires mta_compatibility_level: 2"
+  when:
+    - mta_compatibility_level | string is version('3.6', '>=')
+    - postfix_config_defaults.mail_version is version('3.6', '<')
+
 - name: "Postfix: deploy privacy header checks"
   ansible.builtin.template:
     src: postfix/privacy_header_checks.pcre

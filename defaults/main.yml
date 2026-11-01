@@ -1,4 +1,6 @@
 ---
+# requires postfix >= 3.6, set to 2 for older versions
+mta_compatibility_level: "3.6"
 mta_override_destination: []
 mta_relayhost: false
 # mta_relayhost_auth (mapping with username/mapfile) and mta_relayhost_password

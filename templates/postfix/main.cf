@@ -8,7 +8,7 @@
 myhostname = {{ mta_override_hostname | default(inventory_hostname) }}
 myorigin = $myhostname
 
-compatibility_level = 2
+compatibility_level = {{ mta_compatibility_level }}
 
 {% if mta_delivery_agent %}
 # mta_delivery_agent is set ({{ mta_delivery_agent }})
