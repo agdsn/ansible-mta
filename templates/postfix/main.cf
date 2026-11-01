@@ -112,7 +112,6 @@ smtpd_tls_key_file = /etc/postfix/mta.key
 {% endif %}
 smtpd_tls_security_level = {{ mta_tls_security_level }}
 smtpd_tls_exclude_ciphers = EXPORT, LOW
-tls_ssl_options = NO_COMPRESSION
 {% endif %}
 
 smtp_tls_wrappermode = {{ "yes" if mta_smtp_tls_wrappermode else "no" }}
