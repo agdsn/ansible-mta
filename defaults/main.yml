@@ -134,10 +134,6 @@ mta_dkim_local_signing: false
 mta_dkim_keys: {}
 mta_dkim_domains: []
 
-# Mailman settings
-mta_use_mailman: false
-mta_mailman_script_location: /etc/mailman/postfix-to-mailman.py
-
 # other
 mta_pipe_transports: []
 mta_unverified_recipient_reject_code: 450
