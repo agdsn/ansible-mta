@@ -322,7 +322,7 @@ unverified_recipient_reject_code = {{ mta_unverified_recipient_reject_code }}
 # origin: mta_msa_sender_login_maps
 {% call string_list(mta_msa_sender_login_maps) %}submission_sender_login_maps{% endcall %}
 
-{% for key, value in mta_parameters_all|combine(mta_parameters)|dictsort -%}
+{% for key, value in mta_parameters|dictsort -%}
   {{ key }}=
   {%- if value is mapping -%}
     inline:{ {{ value | dictsort | map('join', ' = ') | map('regex_replace', '^(.*)$', '{ \\1 }') | join(', ') }} }
