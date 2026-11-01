@@ -4,7 +4,7 @@
     name: postfix-policyd-spf-python
     state: present
   notify:
-  - reload postfix
+    - reload postfix
 
 - name: deploy configuration
   ansible.builtin.template:
@@ -14,4 +14,4 @@
     group: root
     mode: u=rw,go=r
   notify:
-  - reload postfix
+    - reload postfix
