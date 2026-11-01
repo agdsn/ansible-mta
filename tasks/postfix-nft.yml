@@ -1,3 +1,7 @@
+- name: "postfix: set up nft hook"
+  ansible.builtin.include_role:
+    name: nft-hook
+
 - name: "postfix: deploy MTA nft config"
   ansible.builtin.template:
     src: nft/mta.conf

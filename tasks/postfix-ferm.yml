@@ -1,4 +1,8 @@
 ---
+- name: "postfix: set up ferm hook"
+  ansible.builtin.include_role:
+    name: ferm-hook
+
 - name: "postfix: deploy MTA ferm config"
   ansible.builtin.template:
     src: ferm/mta.conf
