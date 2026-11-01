@@ -18,7 +18,7 @@
 {% set args = args + ['-o smtpd_milters=inet:127.0.0.1:' ~ mta_rspamd_port, '-o milter_default_action=accept'] %}
 {% endif %}
 {{ args | join('\n  ') }}
-{%- endmacro -%}
+{%- endmacro %}
 
 {% if mta_listen %}
 {% if mta_postscreen %}
@@ -27,17 +27,18 @@ smtpd     pass  -       -       n       -       -       smtpd {% call smtpd_args
 
 dnsblog   unix  -       -       n       -       0       dnsblog
 tlsproxy  unix  -       -       n       -       0       tlsproxy
-{%- else %}
+{% else %}
 smtp      inet  n       -       n       -       -       smtpd {% call smtpd_args() %}{% endcall %}
-{%- endif %}
-{%- endif %}
 
+{% endif %}
+
+{% endif %}
 {% if mta_dkim_local_signing %}
 2525  inet    n   -   n   -   -   smtpd
   -o smtpd_milters=unix:/run/opendkim/opendkim.sock
-{% endif %}
 
-{% if mta_msa -%}
+{% endif %}
+{% if mta_msa %}
 {% if mta_msa_proxy %}127.0.0.1:1587{% else %}submission{% endif %} inet n       -       n       -       -       smtpd
 {% if not mta_msa_proxy %}
   -o smtpd_client_restrictions=permit_sasl_authenticated,reject
@@ -75,8 +76,8 @@ smtp      inet  n       -       n       -       -       smtpd {% call smtpd_args
   -o {{ key }}={{ value }}
   {% endif %}
 {% endfor %}
-{%- endif %}
 
+{% endif %}
 {% if mta_spampd %}
 127.0.0.1:{{ mta_proxy_sink_port }} inet n - n - -      smtpd
   -o smtpd_authorized_xforward_hosts=127.0.0.0/8
@@ -88,13 +89,13 @@ smtp      inet  n       -       n       -       -       smtpd {% call smtpd_args
   -o mynetworks=127.0.0.0/8
   -o receive_override_options=no_unknown_recipient_checks
   -o syslog_name=postfix/post-filters
-{%- endif %}
 
+{% endif %}
 {% if mta_spf %}
 spf unix - n n - - spawn
   user=nobody argv=/usr/bin/policyd-spf
-{% endif %}
 
+{% endif %}
 #628       inet  n       -       n       -       -       qmqpd
 pickup    unix  n       -       n       60      1       pickup
 {% if mta_local_canonical_header_checks or mta_local_sender_canonical_maps or mta_local_recipient_canonical_maps %}
@@ -143,11 +144,12 @@ privacy-cleanup unix n - - - 0 cleanup
     -o syslog_name=postfix/privacy-cleanup
     -o header_checks=pcre:/etc/postfix/privacy_header_checks.pcre
 {% endif %}
-
 {% for service in mta_additional_services + mta_services %}
+{% if loop.first %}
+
+{% endif %}
 {% if service is string %}
 {{ service }}
-
 {% else %}
 {{ service.service }} {{ service.type }} {{ service.private | default('-') }} {{ service.unpriv | default('-') }} {{ service.chroot | default('n') }} {{ service.wakeup | default('-') }} {{ service.maxproc | default('-') }} {{ service.command }}
   {% if service.command_attributes is defined %}
