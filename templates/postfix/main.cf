@@ -117,7 +117,9 @@ tls_ssl_options = NO_COMPRESSION
 
 smtp_tls_wrappermode = {{ "yes" if mta_smtp_tls_wrappermode else "no" }}
 smtp_tls_security_level = {{ mta_smtp_tls_security_level }}
+{% if mta_smtp_tls_ca_path %}
 smtp_tls_CApath = {{ mta_smtp_tls_ca_path }}
+{% endif %}
 {% if mta_tls_dnssec %}
 smtp_dns_support_level = dnssec
 {% endif %}

@@ -9,7 +9,7 @@ mta_relayhost_auth_password: "{{ mta_relayhost_password if mta_relayhost_auth el
 mta_relayhost_auth_mapfile: "{{ mta_relayhost_auth.mapfile if mta_relayhost_auth else '/etc/postfix/password_map' }}"
 mta_smtp_tls_wrappermode: false
 mta_smtp_tls_security_level: "may"
-mta_smtp_tls_ca_path: /etc/ssl/certs/
+mta_smtp_tls_ca_path: null
 mta_listen: True
 mta_smtpd_upstream_proxy_protocol: ""
 mta_smtpd_restriction_classes: {}
