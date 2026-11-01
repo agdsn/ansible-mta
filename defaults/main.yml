@@ -135,7 +135,6 @@ mta_dkim_keys: {}
 mta_dkim_domains: []
 
 # other
-mta_pipe_transports: []
 mta_unverified_recipient_reject_code: 450
 mta_config_files: []
 

@@ -336,7 +336,7 @@ unverified_recipient_reject_code = {{ mta_unverified_recipient_reject_code }}
   {{ '\n' }}
 {%- endfor %}
 
-{% for service in mta_services %}
+{% for service in mta_additional_services + mta_services if service is mapping %}
   {% if service.transport_config is defined %}
 # origin: mta_services[{{ service.service }}].transport_config
     {% for key, value in service.transport_config|dictsort %}
