@@ -51,7 +51,8 @@ mta_access_databases: {}
 mta_alias_database: []
 mta_hashes: []
 mta_ldaps: []
-mta_pcre: true
+mta_pcre: "{{ mta_msa_privacy }}"
+mta_pgsql: false
 mta_virtual_maps: []
 mta_virtual_alias_maps: []
 mta_alias_maps:

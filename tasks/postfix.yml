@@ -32,6 +32,16 @@
   notify:
     - Restart postfix
 
+- name: Install PostgreSQL lookup support
+  ansible.builtin.package:
+    name: postfix-pgsql
+    state: present
+  when: mta_pgsql
+  tags:
+    - apt
+  notify:
+    - Restart postfix
+
 - name: Discover default configuration values
   ansible.builtin.command: postconf -d
   register: _postfix_config_defaults
