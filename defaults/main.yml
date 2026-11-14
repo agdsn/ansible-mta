@@ -51,6 +51,7 @@ mta_access_databases: {}
 mta_alias_database: []
 mta_hashes: []
 mta_ldaps: []
+mta_pcre: true
 mta_virtual_maps: []
 mta_virtual_alias_maps: []
 mta_alias_maps:
@@ -138,6 +139,7 @@ mta_dkim_domains: []
 
 # other
 mta_unverified_recipient_reject_code: 450
+mta_collectd_scripts: true
 mta_config_files: []
 
 # Additional parameters

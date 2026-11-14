@@ -5,11 +5,28 @@
 
 - name: Install packages
   ansible.builtin.package:
-    name:
-      - postfix
-      - postfix-ldap
-      - postfix-pcre
+    name: postfix
     state: present
+  tags:
+    - apt
+  notify:
+    - Restart postfix
+
+- name: Install LDAP lookup support
+  ansible.builtin.package:
+    name: postfix-ldap
+    state: present
+  when: mta_ldaps | length > 0
+  tags:
+    - apt
+  notify:
+    - Restart postfix
+
+- name: Install PCRE lookup support
+  ansible.builtin.package:
+    name: postfix-pcre
+    state: present
+  when: mta_pcre or mta_msa_privacy
   tags:
     - apt
   notify:
@@ -347,3 +364,4 @@
     src: queuesize.sh
     dest: /usr/local/bin/
     mode: ugo=rx
+  when: mta_collectd_scripts
