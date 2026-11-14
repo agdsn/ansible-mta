@@ -73,7 +73,6 @@ mta_global_rfc_addresses:
     - root
   abuse:
     - root
-mta_domain_rfc_addresses: {}
 
 # Local mail delivery
 mta_delivery_type: "local"
