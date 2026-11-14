@@ -203,6 +203,7 @@
 
 - name: "Postfix: build rfc address tables"
   ansible.builtin.import_tasks: postfix-build-rfc-address-tables.yml
+  when: mta_global_rfc_addresses | length > 0
   tags:
     - postfix-map
     - postfix-map-hash
