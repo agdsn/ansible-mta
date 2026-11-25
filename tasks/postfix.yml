@@ -178,7 +178,7 @@
   ansible.builtin.file:
     state: directory
     path: /etc/postfix/maps/
-    owner: postfix
+    owner: root
     group: postfix
     mode: ug=rwx,o-rwx
   register: map_infrastructure
