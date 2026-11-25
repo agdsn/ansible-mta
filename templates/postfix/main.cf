@@ -309,20 +309,27 @@ recipient_delimiter = {{ mta_recipient_delimiter }}
 unverified_recipient_reject_code = {{ mta_unverified_recipient_reject_code }}
 
 {% endif %}
-{% if mta_msa %}
+{% set mta_msa_submission = mta_msa and (mta_msa_recipient_restrictions or mta_msa_sender_restrictions or mta_msa_sender_login_maps) %}
+{% if mta_msa_submission %}
 # submission settings which may contain whitespace
+{% if mta_msa_recipient_restrictions %}
 
 # origin: mta_msa_recipient_restrictions
 {% call string_list(mta_msa_recipient_restrictions) %}submission_recipient_restrictions{% endcall %}
+{% endif %}
+{% if mta_msa_sender_restrictions %}
 
 # origin: mta_msa_sender_restrictions
 {% call string_list(mta_msa_sender_restrictions) %}submission_sender_restrictions{% endcall %}
+{% endif %}
+{% if mta_msa_sender_login_maps %}
 
 # origin: mta_msa_sender_login_maps
 {% call string_list(mta_msa_sender_login_maps) %}submission_sender_login_maps{% endcall %}
 {% endif %}
+{% endif %}
 {% for key, value in mta_parameters|dictsort -%}
-  {% if loop.first and mta_msa %}{{ '\n' }}{% endif -%}
+  {% if loop.first and mta_msa_submission %}{{ '\n' }}{% endif -%}
   {{ key }}=
   {%- if value is mapping -%}
     inline:{ {{ value | dictsort | map('join', ' = ') | map('regex_replace', '^(.*)$', '{ \\1 }') | join(', ') }} }
