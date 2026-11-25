@@ -117,7 +117,7 @@
   ansible.builtin.template:
     src: postfix/access
     dest: "{{ item.key }}"
-    mode: "{{ item.value.mode | default('0664') }}"
+    mode: "{{ item.value.mode | default('0644') }}"
     owner: "{{ item.value.owner | default('root') }}"
     group: "{{ item.value.group | default('root') }}"
   with_dict: "{{ mta_access_databases }}"
@@ -180,7 +180,7 @@
     path: /etc/postfix/maps/
     owner: root
     group: postfix
-    mode: ug=rwx,o-rwx
+    mode: "0755"
   register: map_infrastructure
   tags:
     - postfix-map
